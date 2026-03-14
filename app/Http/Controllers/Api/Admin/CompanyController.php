@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Http\Controllers\Api\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Company;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class CompanyController extends Controller
+{
+    public function index(Request $request): JsonResponse
+    {
+        $query = Company::query()->withCount(['users', 'branches', 'bookings']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('npwp', 'like', "%{$search}%")
+                  ->orWhere('nib', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $companies = $query->orderBy('created_at', 'desc')
+            ->paginate($request->per_page ?? 15);
+
+        return response()->json($companies);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'npwp' => 'nullable|string|max:30',
+            'nib' => 'nullable|string|max:30',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|max:10',
+            'contact_person' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'status' => 'nullable|in:pending,active,inactive',
+            'billing_cycle' => 'nullable|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+        ]);
+
+        $company = Company::create($validated);
+
+        return response()->json([
+            'message' => 'Perusahaan berhasil dibuat.',
+            'data' => $company,
+        ], 201);
+    }
+
+    public function show(Company $company): JsonResponse
+    {
+        $company->load(['branches', 'users.roles', 'customerDiscounts']);
+        $company->loadCount(['bookings', 'invoices']);
+
+        return response()->json(['data' => $company]);
+    }
+
+    public function update(Request $request, Company $company): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'npwp' => 'nullable|string|max:30',
+            'nib' => 'nullable|string|max:30',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|max:10',
+            'contact_person' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'billing_cycle' => 'nullable|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+        ]);
+
+        $company->update($validated);
+
+        return response()->json([
+            'message' => 'Perusahaan berhasil diperbarui.',
+            'data' => $company,
+        ]);
+    }
+
+    public function destroy(Company $company): JsonResponse
+    {
+        $company->delete();
+
+        return response()->json(['message' => 'Perusahaan berhasil dihapus.']);
+    }
+
+    /**
+     * Setujui / aktivasi perusahaan.
+     */
+    public function approve(Company $company): JsonResponse
+    {
+        $company->update(['status' => 'active']);
+
+        return response()->json([
+            'message' => 'Perusahaan berhasil diaktifkan.',
+            'data' => $company,
+        ]);
+    }
+
+    /**
+     * Tolak / nonaktifkan perusahaan.
+     */
+    public function reject(Company $company): JsonResponse
+    {
+        $company->update(['status' => 'inactive']);
+
+        return response()->json([
+            'message' => 'Perusahaan berhasil dinonaktifkan.',
+            'data' => $company,
+        ]);
+    }
+}
