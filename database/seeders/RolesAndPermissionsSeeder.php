@@ -14,7 +14,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // ── Permissions ──
+        // ── Permissions (25+; extended for granular roles) ──
         $permissions = [
             // Customer Management
             'view_companies', 'create_companies', 'edit_companies', 'delete_companies', 'approve_companies',
@@ -23,15 +23,20 @@ class RolesAndPermissionsSeeder extends Seeder
             // Master Data
             'manage_master_data',
             // Booking
-            'view_bookings', 'create_bookings', 'edit_bookings', 'approve_bookings', 'reject_bookings',
+            'view_bookings', 'create_bookings', 'edit_bookings', 'approve_bookings', 'reject_bookings', 'cancel_bookings',
             // Shipment
             'view_shipments', 'create_shipments', 'edit_shipments', 'update_tracking',
             // Invoice
-            'view_invoices', 'create_invoices', 'edit_invoices',
+            'view_invoices', 'create_invoices', 'edit_invoices', 'approve_invoices', 'void_invoices',
             // Payment
             'view_payments', 'manage_payments',
             // Vendor & Pricing
-            'manage_vendors', 'manage_pricing',
+            'manage_vendors', 'manage_pricing', 'manage_discounts',
+            // Reporting & ops
+            'view_reports', 'export_reports', 'view_dashboard', 'view_analytics',
+            'manage_branches', 'manage_documents', 'manage_notifications',
+            'view_audit_log', 'view_vendors', 'view_pricing', 'edit_pricing',
+            'view_containers', 'edit_containers', 'manage_tracking_photos',
         ];
 
         foreach ($permissions as $permission) {
@@ -80,6 +85,33 @@ class RolesAndPermissionsSeeder extends Seeder
         $financePic->givePermissionTo([
             'view_bookings', 'view_shipments', 'view_invoices', 'view_payments',
         ]);
+
+        // ── Additional internal roles (25+ roles total) ──
+        $extraRoles = [
+            'warehouse_staff' => ['view_shipments', 'edit_shipments', 'update_tracking', 'view_containers', 'edit_containers', 'manage_tracking_photos'],
+            'customs_specialist' => ['view_shipments', 'view_bookings', 'manage_documents', 'view_companies'],
+            'dispatcher' => ['view_bookings', 'view_shipments', 'edit_shipments', 'update_tracking', 'view_dashboard'],
+            'documentation_clerk' => ['view_bookings', 'view_shipments', 'manage_documents', 'view_invoices'],
+            'billing_clerk' => ['view_invoices', 'create_invoices', 'edit_invoices', 'view_payments'],
+            'vendor_coordinator' => ['manage_vendors', 'view_vendors', 'view_shipments', 'view_bookings'],
+            'pricing_analyst' => ['view_pricing', 'edit_pricing', 'manage_pricing', 'view_reports', 'export_reports'],
+            'customer_support_lead' => ['view_companies', 'view_bookings', 'view_shipments', 'view_users', 'view_dashboard'],
+            'auditor_readonly' => ['view_audit_log', 'view_reports', 'view_invoices', 'view_payments', 'view_bookings', 'view_shipments'],
+            'regional_manager_west' => ['view_companies', 'view_bookings', 'approve_bookings', 'view_shipments', 'view_reports', 'manage_branches'],
+            'regional_manager_east' => ['view_companies', 'view_bookings', 'approve_bookings', 'view_shipments', 'view_reports', 'manage_branches'],
+            'import_supervisor' => ['view_bookings', 'approve_bookings', 'view_shipments', 'create_shipments', 'edit_shipments', 'update_tracking'],
+            'export_supervisor' => ['view_bookings', 'approve_bookings', 'view_shipments', 'create_shipments', 'edit_shipments', 'update_tracking'],
+            'fleet_supervisor' => ['view_shipments', 'edit_shipments', 'update_tracking', 'view_containers', 'view_dashboard'],
+            'hub_operator' => ['view_shipments', 'edit_shipments', 'update_tracking', 'manage_tracking_photos'],
+            'report_viewer' => ['view_reports', 'export_reports', 'view_analytics', 'view_dashboard'],
+            'guest_readonly' => ['view_dashboard', 'view_bookings', 'view_shipments'],
+            'training_supervisor' => ['view_users', 'view_bookings', 'view_shipments', 'view_reports'],
+        ];
+
+        foreach ($extraRoles as $roleName => $perms) {
+            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+            $role->syncPermissions($perms);
+        }
 
         // ── Super Admin User ──
         $admin = User::firstOrCreate(

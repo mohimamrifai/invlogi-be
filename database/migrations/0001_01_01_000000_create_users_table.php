@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('phone', 20)->nullable();
             $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
             $table->enum('user_type', ['internal', 'customer'])->default('internal');
-            $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('company_id')->nullable();
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
