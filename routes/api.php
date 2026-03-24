@@ -3,7 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\MidtransWebhookController;
+use App\Http\Controllers\Api\PublicBookingEstimateController;
 use App\Http\Controllers\Api\PublicTrackingController;
+use App\Http\Controllers\Api\Customer\MasterDataReadController;
 use App\Http\Controllers\Api\Customer\RegistrationController;
 use App\Http\Controllers\Api\Customer\BookingController as CustomerBookingController;
 use App\Http\Controllers\Api\Customer\ShipmentController as CustomerShipmentController;
@@ -11,7 +13,6 @@ use App\Http\Controllers\Api\Customer\InvoiceController as CustomerInvoiceContro
 use App\Http\Controllers\Api\Customer\PaymentController as CustomerPaymentController;
 use App\Http\Controllers\Api\Customer\CompanyController as CustomerCompanyController;
 use App\Http\Controllers\Api\Customer\DashboardController as CustomerDashboardController;
-use App\Http\Controllers\Api\Customer\MasterDataReadController;
 use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\CompanyController;
 use App\Http\Controllers\Api\Admin\UserController;
@@ -37,6 +38,16 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [RegistrationController::class, 'register']);
 Route::get('/tracking', [PublicTrackingController::class, 'track']);
 Route::get('/tracking/waybill-pdf', [PublicTrackingController::class, 'waybillPdf']);
+
+// Master data + estimasi biaya (tanpa login, untuk landing / halaman publik)
+Route::prefix('public')->group(function () {
+    Route::get('master/locations', [MasterDataReadController::class, 'locations']);
+    Route::get('master/transport-modes', [MasterDataReadController::class, 'transportModes']);
+    Route::get('master/service-types', [MasterDataReadController::class, 'serviceTypes']);
+    Route::get('master/container-types', [MasterDataReadController::class, 'containerTypes']);
+    Route::get('master/additional-services', [MasterDataReadController::class, 'additionalServices']);
+    Route::post('bookings/estimate-price', [PublicBookingEstimateController::class, 'estimate']);
+});
 // Midtrans notification (no auth - called by Midtrans)
 Route::post('/payments/midtrans/notification', [MidtransWebhookController::class, 'notification']);
 
