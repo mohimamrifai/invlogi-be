@@ -12,10 +12,28 @@ class MasterDataController extends Controller
     public function locations(Request $request): JsonResponse
     {
         $query = \App\Models\Location::query();
-        if ($request->filled('type')) $query->where('type', $request->type);
-        if ($request->filled('search')) $query->where('name', 'like', "%{$request->search}%");
-        if ($request->boolean('active_only', false)) $query->active();
-        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 50));
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+        if ($request->boolean('active_only', false)) {
+            $query->active();
+        }
+
+        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 15));
     }
 
     public function storeLocation(Request $request): JsonResponse
@@ -54,9 +72,25 @@ class MasterDataController extends Controller
     }
 
     // ── TRANSPORT MODES ──
-    public function transportModes(): JsonResponse
+    public function transportModes(Request $request): JsonResponse
     {
-        return response()->json(['data' => \App\Models\TransportMode::with('serviceTypes')->orderBy('name')->get()]);
+        $query = \App\Models\TransportMode::with('serviceTypes')->orderBy('name');
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->paginate($request->per_page ?? 15));
     }
 
     public function storeTransportMode(Request $request): JsonResponse
@@ -90,8 +124,25 @@ class MasterDataController extends Controller
     public function serviceTypes(Request $request): JsonResponse
     {
         $query = \App\Models\ServiceType::with('transportMode');
-        if ($request->filled('transport_mode_id')) $query->where('transport_mode_id', $request->transport_mode_id);
-        return response()->json(['data' => $query->orderBy('name')->get()]);
+        if ($request->filled('transport_mode_id')) {
+            $query->where('transport_mode_id', $request->transport_mode_id);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 15));
     }
 
     public function storeServiceType(Request $request): JsonResponse
@@ -126,9 +177,25 @@ class MasterDataController extends Controller
     }
 
     // ── CONTAINER TYPES ──
-    public function containerTypes(): JsonResponse
+    public function containerTypes(Request $request): JsonResponse
     {
-        return response()->json(['data' => \App\Models\ContainerType::orderBy('size')->get()]);
+        $query = \App\Models\ContainerType::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('size', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('size')->paginate($request->per_page ?? 15));
     }
 
     public function storeContainerType(Request $request): JsonResponse
@@ -172,8 +239,22 @@ class MasterDataController extends Controller
     public function additionalServices(Request $request): JsonResponse
     {
         $query = \App\Models\AdditionalService::query();
-        if ($request->filled('category')) $query->where('category', $request->category);
-        return response()->json(['data' => $query->orderBy('category')->orderBy('name')->get()]);
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where('name', 'like', "%{$s}%");
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('category')->orderBy('name')->paginate($request->per_page ?? 15));
     }
 
     public function storeAdditionalService(Request $request): JsonResponse

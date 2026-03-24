@@ -14,7 +14,17 @@ class VendorController extends Controller
     // ── VENDORS ──
     public function index(Request $request): JsonResponse
     {
-        $query = Vendor::withCount('vendorServices');
+        $query = Vendor::withCount('vendorServices')
+            ->with([
+                'vendorServices' => function ($q) {
+                    $q->orderBy('id')
+                        ->with([
+                            'serviceType:id,name,code',
+                            'originLocation:id,code,name',
+                            'destinationLocation:id,code,name',
+                        ]);
+                },
+            ]);
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(fn($q) => $q->where('name', 'like', "%{$s}%")->orWhere('code', 'like', "%{$s}%"));

@@ -20,6 +20,14 @@ class ShipmentController extends Controller
 
         if ($request->filled('status')) $query->where('status', $request->status);
 
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('waybill_number', 'like', "%{$s}%")
+                    ->orWhere('shipment_number', 'like', "%{$s}%");
+            });
+        }
+
         return response()->json($query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 15));
     }
 

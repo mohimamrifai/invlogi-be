@@ -30,6 +30,14 @@ class PaymentController extends Controller
             $query->where('invoice_id', $request->invoice_id);
         }
 
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('midtrans_order_id', 'like', "%{$s}%")
+                    ->orWhereHas('invoice', fn ($iq) => $iq->where('invoice_number', 'like', "%{$s}%"));
+            });
+        }
+
         $payments = $query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 15);
 
         return response()->json($payments);

@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\Customer\InvoiceController as CustomerInvoiceContro
 use App\Http\Controllers\Api\Customer\PaymentController as CustomerPaymentController;
 use App\Http\Controllers\Api\Customer\CompanyController as CustomerCompanyController;
 use App\Http\Controllers\Api\Customer\DashboardController as CustomerDashboardController;
+use App\Http\Controllers\Api\Customer\MasterDataReadController;
+use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Api\Admin\CompanyController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\MasterDataController;
@@ -52,6 +54,8 @@ Route::middleware('auth:sanctum')->group(function () {
     //  ADMIN INTERNAL
     // ══════════════════════════════════════════
     Route::prefix('admin')->middleware('admin')->group(function () {
+
+        Route::get('dashboard', [AdminDashboardController::class, 'index']);
 
         // Customer Management
         Route::apiResource('companies', CompanyController::class);
@@ -148,6 +152,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Dashboard (ringkasan untuk halaman Dashboard Customer Portal)
         Route::get('dashboard', [CustomerDashboardController::class, 'index']);
+
+        // Master data (read-only, untuk form booking)
+        Route::get('master/locations', [MasterDataReadController::class, 'locations']);
+        Route::get('master/transport-modes', [MasterDataReadController::class, 'transportModes']);
+        Route::get('master/service-types', [MasterDataReadController::class, 'serviceTypes']);
+        Route::get('master/container-types', [MasterDataReadController::class, 'containerTypes']);
+        Route::get('master/additional-services', [MasterDataReadController::class, 'additionalServices']);
 
         // Booking
         Route::post('bookings/estimate-price', [CustomerBookingController::class, 'estimatePrice']);
