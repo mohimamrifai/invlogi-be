@@ -7,7 +7,9 @@ use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Rack;
 use App\Models\Shipment;
+use App\Models\ShipmentItem;
 use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
@@ -107,12 +109,14 @@ class DashboardController extends Controller
 
         $shipmentVolumeByWeek = $this->shipmentVolumeByWeek();
 
+        $rackUtilization = $this->rackUtilizationLclPercent();
+
         return response()->json([
             'data' => [
                 'summary' => [
                     'bookingsToday' => $bookingsToday,
                     'activeShipments' => $activeShipments,
-                    'rackUtilization' => 0,
+                    'rackUtilization' => $rackUtilization,
                     'overdueInvoices' => $overdueInvoices,
                     'activeCompanies' => $activeCompanies,
                     'pendingCompanyApprovals' => $pendingCompanyApprovals,
@@ -131,6 +135,85 @@ class DashboardController extends Controller
                 'shipmentVolumeByWeek' => $shipmentVolumeByWeek,
             ],
         ]);
+    }
+
+    /**
+     * Persentase utilisasi volume rack untuk shipment LCL aktif (bukan completed/cancelled):
+     * total CBM kargo di rack / total volume rack (p × l × t) dari data racks.
+     * Dibulatkan 1 desimal; jika tidak ada rack berdimensi, 0.
+     */
+    private function rackUtilizationLclPercent(): float
+    {
+        $lclShipmentIds = Shipment::query()
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->whereHas('serviceType', function ($q): void {
+                $q->where(function ($q2): void {
+                    $q2->whereRaw('LOWER(COALESCE(code, \'\')) like ?', ['%lcl%'])
+                        ->orWhereRaw('LOWER(COALESCE(name, \'\')) like ?', ['%lcl%']);
+                });
+            })
+            ->pluck('id');
+
+        if ($lclShipmentIds->isEmpty()) {
+            return 0.0;
+        }
+
+        $racks = Rack::query()
+            ->whereHas('container', fn ($q) => $q->whereIn('shipment_id', $lclShipmentIds))
+            ->get();
+
+        $totalCapacityM3 = 0.0;
+        $totalUsedCbm = 0.0;
+
+        foreach ($racks as $rack) {
+            $l = (float) ($rack->length ?? 0);
+            $w = (float) ($rack->width ?? 0);
+            $h = (float) ($rack->height ?? 0);
+            $capacity = $l * $w * $h;
+            if ($capacity <= 0) {
+                continue;
+            }
+
+            $used = $this->sumCbmUsedOnRack((int) $rack->id);
+            $totalCapacityM3 += $capacity;
+            $totalUsedCbm += $used;
+        }
+
+        if ($totalCapacityM3 <= 0) {
+            return 0.0;
+        }
+
+        $pct = ($totalUsedCbm / $totalCapacityM3) * 100.0;
+
+        return round(min(100.0, $pct), 1);
+    }
+
+    /**
+     * Jumlah CBM pada rack: pakai kolom cbm; jika kosong, perkiraan dari dimensi item × quantity.
+     */
+    private function sumCbmUsedOnRack(int $rackId): float
+    {
+        $sum = 0.0;
+        $items = ShipmentItem::query()->where('rack_id', $rackId)->get();
+
+        foreach ($items as $item) {
+            $cbm = $item->cbm;
+            if ($cbm !== null && (float) $cbm > 0) {
+                $sum += (float) $cbm;
+
+                continue;
+            }
+
+            $l = (float) ($item->length ?? 0);
+            $w = (float) ($item->width ?? 0);
+            $h = (float) ($item->height ?? 0);
+            if ($l > 0 && $w > 0 && $h > 0) {
+                $qty = max(1, (int) $item->quantity);
+                $sum += $l * $w * $h * $qty;
+            }
+        }
+
+        return $sum;
     }
 
     /**
