@@ -143,10 +143,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('invoices/{invoice}/pdf', [AdminInvoiceController::class, 'downloadPdf']);
         Route::post('invoices', [AdminInvoiceController::class, 'store']);
         Route::put('invoices/{invoice}', [AdminInvoiceController::class, 'update']);
+        Route::delete('invoices/{invoice}', [AdminInvoiceController::class, 'destroy']);
 
         // Payment / AR Management
         Route::get('payments', [AdminPaymentController::class, 'index']);
         Route::get('payments/overdue-invoices', [AdminPaymentController::class, 'overdueInvoices']);
+        Route::post('payments/{payment}/sync-midtrans', [AdminPaymentController::class, 'syncMidtrans']);
+        Route::post('payments/{payment}/verify-manual', [AdminPaymentController::class, 'verifyManual']);
         Route::get('payments/{payment}', [AdminPaymentController::class, 'show']);
 
         // Vendor & Pricing Management

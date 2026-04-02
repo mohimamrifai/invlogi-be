@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -44,6 +45,87 @@ class PaymentController extends Controller
     {
         $payment->load(['invoice.company', 'invoice.shipment']);
         return response()->json(['data' => $payment]);
+    }
+
+    /**
+     * Tarik status terkini dari Midtrans Core API dan perbarui pembayaran + invoice.
+     */
+    public function syncMidtrans(Request $request, Payment $payment, MidtransService $midtrans): JsonResponse
+    {
+        if (! $request->user()->can('manage_payments')) {
+            return response()->json(['message' => 'Tidak ada izin untuk mengelola pembayaran.'], 403);
+        }
+
+        try {
+            $midtrans->syncPaymentFromMidtrans($payment);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        $payment->load(['invoice.company', 'invoice.shipment']);
+
+        return response()->json([
+            'message' => 'Status disinkronkan dari Midtrans.',
+            'data' => $payment,
+        ]);
+    }
+
+    /**
+     * Verifikasi manual (transfer bank, koreksi webhook, dll.): tandai pembayaran sukses dan invoice lunas.
+     */
+    public function verifyManual(Request $request, Payment $payment): JsonResponse
+    {
+        if (! $request->user()->can('manage_payments')) {
+            return response()->json(['message' => 'Tidak ada izin untuk mengelola pembayaran.'], 403);
+        }
+
+        $validated = $request->validate([
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $payment->load('invoice');
+        $invoice = $payment->invoice;
+
+        if ($invoice->status === 'cancelled') {
+            return response()->json([
+                'message' => 'Invoice dibatalkan; verifikasi manual tidak diizinkan.',
+            ], 422);
+        }
+
+        if ($invoice->payments()->where('status', 'success')->where('id', '!=', $payment->id)->exists()) {
+            return response()->json([
+                'message' => 'Invoice sudah lunas melalui pembayaran lain.',
+            ], 422);
+        }
+
+        if ($payment->status === 'success') {
+            $payment->load(['invoice.company', 'invoice.shipment']);
+
+            return response()->json([
+                'message' => 'Pembayaran ini sudah tercatat sukses.',
+                'data' => $payment,
+            ]);
+        }
+
+        $payment->update([
+            'status' => 'success',
+            'payment_type' => $payment->payment_type ?: 'manual_confirmation',
+            'paid_at' => now(),
+            'midtrans_response' => array_merge($payment->midtrans_response ?? [], [
+                'manual_verification' => true,
+                'manual_note' => $validated['note'] ?? null,
+                'verified_by_user_id' => $request->user()->id,
+                'verified_at' => now()->toIso8601String(),
+            ]),
+        ]);
+
+        $payment->invoice->markAsPaid();
+        $payment->load(['invoice.company', 'invoice.shipment']);
+
+        return response()->json([
+            'message' => 'Pembayaran diverifikasi manual; invoice ditandai lunas.',
+            'data' => $payment,
+        ]);
     }
 
     /**

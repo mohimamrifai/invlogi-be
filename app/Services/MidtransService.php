@@ -73,8 +73,6 @@ class MidtransService
     public function handleNotification(array $payload): void
     {
         $orderId = $payload['order_id'] ?? null;
-        $transactionStatus = $payload['transaction_status'] ?? null;
-        $fraudStatus = $payload['fraud_status'] ?? null;
 
         if (! $orderId) {
             return;
@@ -85,6 +83,68 @@ class MidtransService
             return;
         }
 
+        $this->applyMidtransPayloadToPayment($payment, $payload);
+    }
+
+    /**
+     * GET /v2/{order_id}/status — sinkron status untuk admin / recovery jika webhook tertunda.
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchTransactionStatus(string $orderId): array
+    {
+        $key = trim(config('midtrans.server_key') ?? '');
+        if ($key === '') {
+            throw new \RuntimeException('MIDTRANS_SERVER_KEY belum dikonfigurasi.');
+        }
+
+        $base = rtrim((string) config('midtrans.api_base_url'), '/');
+        $encoded = rawurlencode($orderId);
+        $response = Http::withBasicAuth($key, '')
+            ->acceptJson()
+            ->get("{$base}/{$encoded}/status");
+
+        if ($response->status() === 404) {
+            throw new \RuntimeException('Order ID tidak ditemukan di Midtrans (sandbox/production harus sesuai konfigurasi).');
+        }
+
+        if (! $response->successful()) {
+            $msg = $response->json('status_message')
+                ?? $response->json('error_messages.0')
+                ?? $response->body();
+
+            throw new \RuntimeException('Midtrans status API: ' . $msg);
+        }
+
+        $body = $response->json();
+        if (! is_array($body)) {
+            throw new \RuntimeException('Respons status Midtrans tidak valid.');
+        }
+
+        return $body;
+    }
+
+    public function syncPaymentFromMidtrans(Payment $payment): void
+    {
+        $orderId = $payment->midtrans_order_id;
+        if ($orderId === null || $orderId === '') {
+            throw new \RuntimeException('Pembayaran tidak memiliki Order ID Midtrans.');
+        }
+
+        $body = $this->fetchTransactionStatus($orderId);
+        $this->applyMidtransPayloadToPayment($payment, $body);
+    }
+
+    /**
+     * Terapkan payload notifikasi atau respons GET status ke satu baris Payment.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function applyMidtransPayloadToPayment(Payment $payment, array $payload): void
+    {
+        $transactionStatus = $payload['transaction_status'] ?? null;
+        $fraudStatus = $payload['fraud_status'] ?? null;
+
         $payment->update([
             'midtrans_transaction_id' => $payload['transaction_id'] ?? $payment->midtrans_transaction_id,
             'payment_type' => $payload['payment_type'] ?? $payment->payment_type,
@@ -92,6 +152,8 @@ class MidtransService
             'midtrans_response' => array_merge($payment->midtrans_response ?? [], $payload),
             'paid_at' => in_array($transactionStatus, ['capture', 'settlement'], true) ? now() : null,
         ]);
+
+        $payment->refresh();
 
         if ($payment->isSuccess()) {
             $payment->invoice->markAsPaid();
@@ -112,6 +174,7 @@ class MidtransService
         if ($status === 'authorize' && $fraudStatus === 'accept') {
             return 'success';
         }
+
         return 'pending';
     }
 }

@@ -113,8 +113,10 @@ class RolesAndPermissionsSeeder extends Seeder
             $role->syncPermissions($perms);
         }
 
-        // ── Super Admin User ──
-        $admin = User::firstOrCreate(
+        // ── Super Admin User (login dev: admin@invlogi.com / password) ──
+        // Pakai updateOrCreate agar password ikut di-reset saat seed dijalankan ulang;
+        // firstOrCreate tidak memperbarui baris yang sudah ada sehingga hash password bisa tidak sesuai seed.
+        $admin = User::updateOrCreate(
             ['email' => 'admin@invlogi.com'],
             [
                 'name' => 'Super Admin',

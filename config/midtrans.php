@@ -16,4 +16,9 @@ return [
     'snap_url' => env('MIDTRANS_IS_PRODUCTION', false)
         ? 'https://app.midtrans.com/snap/v1/transactions'
         : 'https://app.sandbox.midtrans.com/snap/v1/transactions',
+
+    /** Core API base (transaction status, etc.) — trailing slash omitted */
+    'api_base_url' => env('MIDTRANS_IS_PRODUCTION', false)
+        ? 'https://api.midtrans.com/v2'
+        : 'https://api.sandbox.midtrans.com/v2',
 ];

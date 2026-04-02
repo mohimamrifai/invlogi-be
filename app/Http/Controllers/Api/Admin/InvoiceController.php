@@ -8,6 +8,7 @@ use App\Models\InvoiceItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
@@ -35,7 +36,11 @@ class InvoiceController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'shipment_id' => 'required|exists:shipments,id|unique:invoices,shipment_id',
+            'shipment_id' => [
+                'required',
+                'exists:shipments,id',
+                Rule::unique('invoices', 'shipment_id')->whereNull('deleted_at'),
+            ],
             'company_id' => 'required|exists:companies,id',
             'issued_date' => 'required|date',
             'due_date' => 'required|date|after_or_equal:issued_date',
@@ -92,6 +97,19 @@ class InvoiceController extends Controller
         $invoice->update($data);
 
         return response()->json(['message' => 'Invoice diperbarui.', 'data' => $invoice]);
+    }
+
+    public function destroy(Invoice $invoice): JsonResponse
+    {
+        if ($invoice->payments()->where('status', 'success')->exists()) {
+            return response()->json([
+                'message' => 'Invoice yang sudah memiliki pembayaran sukses tidak dapat dihapus.',
+            ], 422);
+        }
+
+        $invoice->delete();
+
+        return response()->json(['message' => 'Invoice berhasil dihapus.']);
     }
 
     public function downloadPdf(Invoice $invoice)
