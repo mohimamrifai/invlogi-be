@@ -86,33 +86,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'view_bookings', 'view_shipments', 'view_invoices', 'view_payments',
         ]);
 
-        // ── Additional internal roles (25+ roles total) ──
-        $extraRoles = [
-            'warehouse_staff' => ['view_shipments', 'edit_shipments', 'update_tracking', 'view_containers', 'edit_containers', 'manage_tracking_photos'],
-            'customs_specialist' => ['view_shipments', 'view_bookings', 'manage_documents', 'view_companies'],
-            'dispatcher' => ['view_bookings', 'view_shipments', 'edit_shipments', 'update_tracking', 'view_dashboard'],
-            'documentation_clerk' => ['view_bookings', 'view_shipments', 'manage_documents', 'view_invoices'],
-            'billing_clerk' => ['view_invoices', 'create_invoices', 'edit_invoices', 'view_payments'],
-            'vendor_coordinator' => ['manage_vendors', 'view_vendors', 'view_shipments', 'view_bookings'],
-            'pricing_analyst' => ['view_pricing', 'edit_pricing', 'manage_pricing', 'view_reports', 'export_reports'],
-            'customer_support_lead' => ['view_companies', 'view_bookings', 'view_shipments', 'view_users', 'view_dashboard'],
-            'auditor_readonly' => ['view_audit_log', 'view_reports', 'view_invoices', 'view_payments', 'view_bookings', 'view_shipments'],
-            'regional_manager_west' => ['view_companies', 'view_bookings', 'approve_bookings', 'view_shipments', 'view_reports', 'manage_branches'],
-            'regional_manager_east' => ['view_companies', 'view_bookings', 'approve_bookings', 'view_shipments', 'view_reports', 'manage_branches'],
-            'import_supervisor' => ['view_bookings', 'approve_bookings', 'view_shipments', 'create_shipments', 'edit_shipments', 'update_tracking'],
-            'export_supervisor' => ['view_bookings', 'approve_bookings', 'view_shipments', 'create_shipments', 'edit_shipments', 'update_tracking'],
-            'fleet_supervisor' => ['view_shipments', 'edit_shipments', 'update_tracking', 'view_containers', 'view_dashboard'],
-            'hub_operator' => ['view_shipments', 'edit_shipments', 'update_tracking', 'manage_tracking_photos'],
-            'report_viewer' => ['view_reports', 'export_reports', 'view_analytics', 'view_dashboard'],
-            'guest_readonly' => ['view_dashboard', 'view_bookings', 'view_shipments'],
-            'training_supervisor' => ['view_users', 'view_bookings', 'view_shipments', 'view_reports'],
-        ];
-
-        foreach ($extraRoles as $roleName => $perms) {
-            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
-            $role->syncPermissions($perms);
-        }
-
         // ── Super Admin User (login dev: admin@invlogi.com / password) ──
         // Pakai updateOrCreate agar password ikut di-reset saat seed dijalankan ulang;
         // firstOrCreate tidak memperbarui baris yang sudah ada sehingga hash password bisa tidak sesuai seed.
