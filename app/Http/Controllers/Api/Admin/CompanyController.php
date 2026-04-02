@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -98,11 +99,15 @@ class CompanyController extends Controller
     }
 
     /**
-     * Setujui / aktivasi perusahaan.
+     * Setujui / aktivasi perusahaan beserta semua user-nya.
      */
     public function approve(Company $company): JsonResponse
     {
         $company->update(['status' => 'active']);
+
+        User::where('company_id', $company->id)
+            ->where('status', '!=', 'active')
+            ->update(['status' => 'active']);
 
         return response()->json([
             'message' => 'Perusahaan berhasil diaktifkan.',
@@ -111,11 +116,15 @@ class CompanyController extends Controller
     }
 
     /**
-     * Tolak / nonaktifkan perusahaan.
+     * Tolak / nonaktifkan perusahaan beserta semua user-nya.
      */
     public function reject(Company $company): JsonResponse
     {
         $company->update(['status' => 'inactive']);
+
+        User::where('company_id', $company->id)
+            ->where('status', '!=', 'inactive')
+            ->update(['status' => 'inactive']);
 
         return response()->json([
             'message' => 'Perusahaan berhasil dinonaktifkan.',
