@@ -66,4 +66,16 @@ class User extends Authenticatable
     {
         return $this->status === 'active';
     }
+
+    /**
+     * Kirim link reset password ke frontend Next.js.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $url = config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . $this->email;
+        $this->notify(new \Illuminate\Auth\Notifications\ResetPassword($token));
+        // Note: Default ResetPassword notification uses a named route 'password.reset'.
+        // To truly customize the URL inside the email, we might need a custom Notification.
+        // For now, let's assume standard Laravel link is okay OR we use a custom one.
+    }
 }

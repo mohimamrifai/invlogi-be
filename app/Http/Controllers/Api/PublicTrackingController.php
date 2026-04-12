@@ -25,7 +25,7 @@ class PublicTrackingController extends Controller
                 'originLocation:id,name,code',
                 'destinationLocation:id,name,code',
                 'trackings' => fn($q) => $q->orderBy('tracked_at', 'asc'),
-                'trackings.photos',
+                'trackings.photos' => fn($q) => $q->where('is_public', true),
             ])
             ->first();
 
@@ -55,22 +55,26 @@ class PublicTrackingController extends Controller
     }
 
     /**
-     * Download waybill PDF by waybill number (public, no login).
+     * Download Consignment Note (CN) PDF by number (public, no login).
      */
-    public function waybillPdf(Request $request)
+    public function consignmentNotePdf(Request $request)
     {
         $request->validate(['waybill' => 'required|string']);
 
         $shipment = Shipment::where('waybill_number', $request->waybill)
-            ->with(['originLocation', 'destinationLocation', 'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc')])
+            ->with([
+                'originLocation', 'destinationLocation', 'serviceType', 'booking.cargoCategory',
+                'items',
+                'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc')
+            ])
             ->first();
 
         if (! $shipment) {
             return response()->json(['message' => 'Pengiriman tidak ditemukan.'], 404);
         }
 
-        $pdf = Pdf::loadView('pdf.waybill', ['shipment' => $shipment]);
+        $pdf = Pdf::loadView('pdf.consignment-note', ['shipment' => $shipment]);
 
-        return $pdf->download('waybill-' . $shipment->waybill_number . '.pdf');
+        return $pdf->download('consignment-note-' . $shipment->waybill_number . '.pdf');
     }
 }

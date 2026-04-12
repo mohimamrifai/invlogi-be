@@ -3,9 +3,12 @@
 namespace Database\Seeders;
 
 use App\Models\AdditionalService;
+use App\Models\CargoCategory;
 use App\Models\ContainerType;
 use App\Models\Location;
 use App\Models\ServiceType;
+use App\Models\Train;
+use App\Models\TrainCar;
 use App\Models\TransportMode;
 use Illuminate\Database\Seeder;
 
@@ -18,6 +21,8 @@ class MasterDataSeeder extends Seeder
         $this->seedServiceTypes();
         $this->seedContainerTypes();
         $this->seedAdditionalServices();
+        $this->seedTrains();
+        $this->seedCargoCategories();
     }
 
     private function seedLocations(): void
@@ -59,30 +64,30 @@ class MasterDataSeeder extends Seeder
     {
         $rows = [
             ['name' => 'Rail Cargo', 'code' => 'RAIL', 'is_active' => true],
-            ['name' => 'Trucking', 'code' => 'TRUCK', 'is_active' => true],
-            ['name' => 'Sea Freight', 'code' => 'SEA', 'is_active' => true],
-            ['name' => 'Air Cargo', 'code' => 'AIR', 'is_active' => true],
-            ['name' => 'Multimodal', 'code' => 'MULTI', 'is_active' => true],
-            ['name' => 'Barge', 'code' => 'BRG', 'is_active' => true],
-            ['name' => 'Feeder Vessel', 'code' => 'FDR', 'is_active' => true],
-            ['name' => 'Mother Vessel', 'code' => 'MVS', 'is_active' => true],
-            ['name' => 'Express Truck', 'code' => 'XTRK', 'is_active' => true],
-            ['name' => 'Cold Chain Truck', 'code' => 'CCT', 'is_active' => true],
+            ['name' => 'Trucking', 'code' => 'TRUCK', 'is_active' => false],
+            ['name' => 'Sea Freight', 'code' => 'SEA', 'is_active' => false],
+            ['name' => 'Air Cargo', 'code' => 'AIR', 'is_active' => false],
+            ['name' => 'Multimodal', 'code' => 'MULTI', 'is_active' => false],
+            ['name' => 'Barge', 'code' => 'BRG', 'is_active' => false],
+            ['name' => 'Feeder Vessel', 'code' => 'FDR', 'is_active' => false],
+            ['name' => 'Mother Vessel', 'code' => 'MVS', 'is_active' => false],
+            ['name' => 'Express Truck', 'code' => 'XTRK', 'is_active' => false],
+            ['name' => 'Cold Chain Truck', 'code' => 'CCT', 'is_active' => false],
             ['name' => 'Charter Air', 'code' => 'CHRT', 'is_active' => false],
-            ['name' => 'Last Mile', 'code' => 'LML', 'is_active' => true],
-            ['name' => 'Cross Border Truck', 'code' => 'CBT', 'is_active' => true],
-            ['name' => 'RoRo', 'code' => 'RORO', 'is_active' => true],
-            ['name' => 'Coastal Shipping', 'code' => 'CST', 'is_active' => true],
+            ['name' => 'Last Mile', 'code' => 'LML', 'is_active' => false],
+            ['name' => 'Cross Border Truck', 'code' => 'CBT', 'is_active' => false],
+            ['name' => 'RoRo', 'code' => 'RORO', 'is_active' => false],
+            ['name' => 'Coastal Shipping', 'code' => 'CST', 'is_active' => false],
             ['name' => 'Inland Waterway', 'code' => 'IWW', 'is_active' => false],
             ['name' => 'Pipeline Segment', 'code' => 'PLN', 'is_active' => false],
             ['name' => 'Drone Pilot (trial)', 'code' => 'DRN', 'is_active' => false],
-            ['name' => 'Hub Shuttle', 'code' => 'HUB', 'is_active' => true],
-            ['name' => 'Dedicated Train Block', 'code' => 'DTB', 'is_active' => true],
-            ['name' => 'Project Cargo', 'code' => 'PRJ', 'is_active' => true],
-            ['name' => 'Heavy Lift', 'code' => 'HVY', 'is_active' => true],
-            ['name' => 'Breakbulk Vessel', 'code' => 'BBK', 'is_active' => true],
-            ['name' => 'Courier Integrasi', 'code' => 'CRR', 'is_active' => true],
-            ['name' => 'Depot Transfer', 'code' => 'DPT', 'is_active' => true],
+            ['name' => 'Hub Shuttle', 'code' => 'HUB', 'is_active' => false],
+            ['name' => 'Dedicated Train Block', 'code' => 'DTB', 'is_active' => false],
+            ['name' => 'Project Cargo', 'code' => 'PRJ', 'is_active' => false],
+            ['name' => 'Heavy Lift', 'code' => 'HVY', 'is_active' => false],
+            ['name' => 'Breakbulk Vessel', 'code' => 'BBK', 'is_active' => false],
+            ['name' => 'Courier Integrasi', 'code' => 'CRR', 'is_active' => false],
+            ['name' => 'Depot Transfer', 'code' => 'DPT', 'is_active' => false],
         ];
 
         foreach ($rows as $row) {
@@ -204,10 +209,61 @@ class MasterDataSeeder extends Seeder
             ['name' => 'Oversized Escort', 'category' => 'other', 'description' => 'Escort muatan ODOL', 'base_price' => 3200000],
             ['name' => 'Cargo Survey', 'category' => 'other', 'description' => 'Survey sebelum pengiriman', 'base_price' => 650000],
             ['name' => 'Detention Monitoring', 'category' => 'other', 'description' => 'Monitoring demurrage/detention', 'base_price' => 200000],
+            ['name' => 'Free Storage 5 Hari (Origin & Destination)', 'category' => 'other', 'description' => 'Bebas biaya sewa gudang 5 hari', 'base_price' => 0],
+            ['name' => 'LOLO (Lift On-Lift Off)', 'category' => 'handling', 'description' => 'Biaya angkat kontainer', 'base_price' => 0],
+            ['name' => 'Container Rent', 'category' => 'other', 'description' => 'Sewa unit kontainer', 'base_price' => 0],
+            ['name' => 'Free Storage 1 Hari (Origin & Destination)', 'category' => 'other', 'description' => 'Bebas biaya sewa gudang 1 hari', 'base_price' => 0],
         ];
 
         foreach ($rows as $svc) {
             AdditionalService::firstOrCreate(['name' => $svc['name']], $svc);
+        }
+    }
+
+    private function seedTrains(): void
+    {
+        $trains = [
+            ['name' => 'KA Logistik Ekspres', 'code' => 'KALOG-EXP'],
+            ['name' => 'KA Barang Cepat', 'code' => 'KABC-FAST'],
+            ['name' => 'KA Petikemas Jawa', 'code' => 'KAPJ-01'],
+        ];
+
+        foreach ($trains as $t) {
+            $train = Train::firstOrCreate(['code' => $t['code']], $t);
+
+            // Seed some wagons for each train
+            for ($i = 1; $i <= 5; $i++) {
+                TrainCar::firstOrCreate(
+                    ['code' => $t['code'].'-'.str_pad($i, 2, '0', STR_PAD_LEFT)],
+                    [
+                        'train_id' => $train->id,
+                        'name' => 'Gerbong '.$i.' ('.$t['name'].')',
+                        'capacity_weight' => 30000,
+                        'capacity_cbm' => 45.0,
+                        'is_active' => true,
+                    ]
+                );
+            }
+        }
+    }
+
+    private function seedCargoCategories(): void
+    {
+        $rows = [
+            ['name' => 'General Cargo', 'code' => 'GEN', 'description' => 'Barang umum yang tidak memerlukan penanganan khusus.'],
+            ['name' => 'Electronics', 'code' => 'ELE', 'description' => 'Barang elektronik, gadget, dan komponen IT.'],
+            ['name' => 'Spareparts', 'code' => 'SPR', 'description' => 'Suku cadang otomotif dan mesin industri.'],
+            ['name' => 'Machinery', 'code' => 'MCH', 'description' => 'Mesin berat dan peralatan pabrik.'],
+            ['name' => 'Garment & Textile', 'code' => 'GMT', 'description' => 'Pakaian, kain, dan produk tekstil lainnya.'],
+            ['name' => 'Food & Beverage', 'code' => 'FNB', 'description' => 'Produk makanan dan minuman olahan.'],
+            ['name' => 'Dangerous Goods', 'code' => 'DG', 'description' => 'Bahan kimia atau barang yang mudah terbakar/meledak.'],
+            ['name' => 'Perishable Goods', 'code' => 'PER', 'description' => 'Barang yang mudah busuk seperti sayur, buah, atau daging.'],
+            ['name' => 'Chemicals', 'code' => 'CHM', 'description' => 'Bahan kimia non-bahaya.'],
+            ['name' => 'Automotive', 'code' => 'AUTO', 'description' => 'Kendaraan atau komponen kendaraan utuh.'],
+        ];
+
+        foreach ($rows as $row) {
+            CargoCategory::firstOrCreate(['code' => $row['code']], array_merge($row, ['is_active' => true]));
         }
     }
 }

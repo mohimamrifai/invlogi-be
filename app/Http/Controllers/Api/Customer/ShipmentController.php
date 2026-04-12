@@ -44,4 +44,21 @@ class ShipmentController extends Controller
 
         return response()->json(['data' => $shipment]);
     }
+
+    public function downloadConsignmentNotePdf(Request $request, Shipment $shipment)
+    {
+        if ($shipment->company_id !== $request->user()->company_id) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $shipment->load([
+            'originLocation', 'destinationLocation', 'serviceType', 'booking.cargoCategory',
+            'items',
+            'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc'),
+        ]);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.consignment-note', ['shipment' => $shipment]);
+
+        return $pdf->download('consignment-note-' . $shipment->waybill_number . '.pdf');
+    }
 }

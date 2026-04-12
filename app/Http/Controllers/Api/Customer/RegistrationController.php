@@ -18,23 +18,27 @@ class RegistrationController extends Controller
     {
         $data = $request->validate([
             // Data Perusahaan
-            'company_name' => 'required|string|max:255',
-            'npwp' => 'nullable|string|max:30',
-            'nib' => 'nullable|string|max:30',
-            'company_address' => 'nullable|string',
-            'city' => 'nullable|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'postal_code' => 'nullable|string|max:10',
-            'company_phone' => 'nullable|string|max:20',
+            'company_entity_type' => 'required|string|max:20|in:PT,CV,Firma,UD,Koperasi,Yayasan,Lainnya',
+            'company_name' => 'required|string|max:255|unique:companies,name',
+            'npwp' => 'required|string|max:30',
+            'nib' => 'required|string|max:30',
+            'company_address' => 'required|string',
+            'city' => 'required|string|max:255',
+            'province' => 'required|string|max:255',
+            'postal_code' => 'required|string|max:10',
+            'company_phone' => 'required|string|max:20',
             // Data User (Company Admin)
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
+        ], [
+            'company_name.unique' => 'Perusahaan dengan nama yang sama sudah terdaftar.',
         ]);
 
         $company = Company::create([
             'name' => $data['company_name'],
+            'business_entity_type' => $data['company_entity_type'],
             'npwp' => $data['npwp'] ?? null,
             'nib' => $data['nib'] ?? null,
             'address' => $data['company_address'] ?? null,

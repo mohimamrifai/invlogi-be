@@ -66,4 +66,34 @@ class MasterDataReadController extends Controller
 
         return response()->json(['data' => $data]);
     }
+
+    public function cargoCategories(): JsonResponse
+    {
+        $data = \App\Models\CargoCategory::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function dgClasses(): JsonResponse
+    {
+        $data = \App\Models\DgClass::query()
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get();
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function additionalCharges(): JsonResponse
+    {
+        $data = \App\Models\AdditionalCharge::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return response()->json(['data' => $data]);
+    }
 }

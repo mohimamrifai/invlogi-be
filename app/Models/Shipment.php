@@ -16,9 +16,12 @@ class Shipment extends Model
     protected $fillable = [
         'shipment_number', 'waybill_number', 'booking_id',
         'company_id', 'origin_location_id', 'destination_location_id',
-        'transport_mode_id', 'service_type_id', 'status',
+        'transport_mode_id', 'service_type_id', 'cargo_category_id',
+        'status',
         'estimated_departure', 'estimated_arrival',
         'actual_departure', 'actual_arrival',
+        'is_dangerous_goods', 'dg_class_id', 'un_number', 'msds_file',
+        'equipment_condition', 'temperature',
         'notes', 'created_by',
     ];
 
@@ -29,6 +32,8 @@ class Shipment extends Model
             'estimated_arrival' => 'date',
             'actual_departure' => 'date',
             'actual_arrival' => 'date',
+            'is_dangerous_goods' => 'boolean',
+            'temperature' => 'decimal:2',
         ];
     }
 
@@ -99,6 +104,23 @@ class Shipment extends Model
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class);
+    }
+
+    public function additionalCharges()
+    {
+        return $this->belongsToMany(AdditionalCharge::class, 'shipment_additional_charge')
+            ->withPivot(['amount', 'is_auto_triggered'])
+            ->withTimestamps();
+    }
+
+    public function cargoCategory(): BelongsTo
+    {
+        return $this->belongsTo(CargoCategory::class);
+    }
+
+    public function dgClass(): BelongsTo
+    {
+        return $this->belongsTo(DgClass::class);
     }
 
     public function latestTracking()

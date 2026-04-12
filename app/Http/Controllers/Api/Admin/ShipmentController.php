@@ -47,6 +47,12 @@ class ShipmentController extends Controller
     public function update(Request $request, Shipment $shipment): JsonResponse
     {
         $data = $request->validate([
+            'cargo_category_id' => 'sometimes|exists:cargo_categories,id',
+            'is_dangerous_goods' => 'sometimes|boolean',
+            'dg_class_id' => 'sometimes|nullable|exists:dg_classes,id',
+            'un_number' => 'sometimes|nullable|string|max:50',
+            'equipment_condition' => 'sometimes|nullable|in:CLEAN,RESIDUAL',
+            'temperature' => 'sometimes|nullable|numeric',
             'estimated_departure' => 'nullable|date',
             'estimated_arrival' => 'nullable|date',
             'actual_departure' => 'nullable|date',
@@ -180,15 +186,16 @@ class ShipmentController extends Controller
         return response()->json(['message' => 'Item dihapus.']);
     }
 
-    public function downloadWaybillPdf(Shipment $shipment)
+    public function downloadConsignmentNotePdf(Shipment $shipment)
     {
         $shipment->load([
-            'originLocation', 'destinationLocation',
+            'originLocation', 'destinationLocation', 'serviceType', 'booking.cargoCategory',
+            'items',
             'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc'),
         ]);
 
-        $pdf = Pdf::loadView('pdf.waybill', ['shipment' => $shipment]);
+        $pdf = Pdf::loadView('pdf.consignment-note', ['shipment' => $shipment]);
 
-        return $pdf->download('waybill-' . $shipment->waybill_number . '.pdf');
+        return $pdf->download('consignment-note-' . $shipment->waybill_number . '.pdf');
     }
 }

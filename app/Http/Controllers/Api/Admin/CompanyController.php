@@ -22,9 +22,9 @@ class CompanyController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('npwp', 'like', "%{$search}%")
-                  ->orWhere('nib', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('npwp', 'like', "%{$search}%")
+                    ->orWhere('nib', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -37,7 +37,8 @@ class CompanyController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:255|unique:companies,name',
+            'business_entity_type' => 'nullable|string|max:20|in:PT,CV,Firma,UD,Koperasi,Yayasan,Lainnya',
             'npwp' => 'nullable|string|max:30',
             'nib' => 'nullable|string|max:30',
             'address' => 'nullable|string',
@@ -48,7 +49,7 @@ class CompanyController extends Controller
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'status' => 'nullable|in:pending,active,inactive',
-            'billing_cycle' => 'nullable|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+            'billing_cycle' => 'required|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
         ]);
 
         $company = Company::create($validated);
@@ -70,7 +71,8 @@ class CompanyController extends Controller
     public function update(Request $request, Company $company): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
+            'name' => sprintf('sometimes|string|max:255|unique:companies,name,%d', $company->id),
+            'business_entity_type' => 'nullable|string|max:20|in:PT,CV,Firma,UD,Koperasi,Yayasan,Lainnya',
             'npwp' => 'nullable|string|max:30',
             'nib' => 'nullable|string|max:30',
             'address' => 'nullable|string',
@@ -80,7 +82,7 @@ class CompanyController extends Controller
             'contact_person' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
-            'billing_cycle' => 'nullable|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+            'billing_cycle' => 'required|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
         ]);
 
         $company->update($validated);

@@ -3,6 +3,16 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdditionalService;
+use App\Models\CargoCategory;
+use App\Models\ContainerType;
+use App\Models\Location;
+use App\Models\ServiceType;
+use App\Models\Train;
+use App\Models\TrainCar;
+use App\Models\TransportMode;
+use App\Models\DgClass;
+use App\Models\AdditionalCharge;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,7 +21,7 @@ class MasterDataController extends Controller
     // ── LOCATIONS ──
     public function locations(Request $request): JsonResponse
     {
-        $query = \App\Models\Location::query();
+        $query = Location::query();
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
@@ -41,40 +51,43 @@ class MasterDataController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:20|unique:locations,code',
-            'type' => 'required|in:port,city,hub,warehouse',
+            'type' => 'required|in:port,city,hub,warehouse,station,airport,terminal',
             'city' => 'nullable|string|max:255',
             'province' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
-        return response()->json(['data' => \App\Models\Location::create($data)], 201);
+
+        return response()->json(['data' => Location::create($data)], 201);
     }
 
-    public function updateLocation(Request $request, \App\Models\Location $location): JsonResponse
+    public function updateLocation(Request $request, Location $location): JsonResponse
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
             'code' => "nullable|string|max:20|unique:locations,code,{$location->id}",
-            'type' => 'sometimes|in:port,city,hub,warehouse',
+            'type' => 'sometimes|in:port,city,hub,warehouse,station,airport,terminal',
             'city' => 'nullable|string|max:255',
             'province' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
         $location->update($data);
+
         return response()->json(['data' => $location]);
     }
 
-    public function destroyLocation(\App\Models\Location $location): JsonResponse
+    public function destroyLocation(Location $location): JsonResponse
     {
         $location->delete();
+
         return response()->json(['message' => 'Lokasi berhasil dihapus.']);
     }
 
     // ── TRANSPORT MODES ──
     public function transportModes(Request $request): JsonResponse
     {
-        $query = \App\Models\TransportMode::with('serviceTypes')->orderBy('name');
+        $query = TransportMode::with('serviceTypes')->orderBy('name');
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
@@ -100,10 +113,11 @@ class MasterDataController extends Controller
             'code' => 'nullable|string|max:10|unique:transport_modes,code',
             'is_active' => 'boolean',
         ]);
-        return response()->json(['data' => \App\Models\TransportMode::create($data)], 201);
+
+        return response()->json(['data' => TransportMode::create($data)], 201);
     }
 
-    public function updateTransportMode(Request $request, \App\Models\TransportMode $transportMode): JsonResponse
+    public function updateTransportMode(Request $request, TransportMode $transportMode): JsonResponse
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -111,19 +125,21 @@ class MasterDataController extends Controller
             'is_active' => 'boolean',
         ]);
         $transportMode->update($data);
+
         return response()->json(['data' => $transportMode]);
     }
 
-    public function destroyTransportMode(\App\Models\TransportMode $transportMode): JsonResponse
+    public function destroyTransportMode(TransportMode $transportMode): JsonResponse
     {
         $transportMode->delete();
+
         return response()->json(['message' => 'Transport mode berhasil dihapus.']);
     }
 
     // ── SERVICE TYPES ──
     public function serviceTypes(Request $request): JsonResponse
     {
-        $query = \App\Models\ServiceType::with('transportMode');
+        $query = ServiceType::with('transportMode');
         if ($request->filled('transport_mode_id')) {
             $query->where('transport_mode_id', $request->transport_mode_id);
         }
@@ -154,10 +170,11 @@ class MasterDataController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
-        return response()->json(['data' => \App\Models\ServiceType::create($data)], 201);
+
+        return response()->json(['data' => ServiceType::create($data)], 201);
     }
 
-    public function updateServiceType(Request $request, \App\Models\ServiceType $serviceType): JsonResponse
+    public function updateServiceType(Request $request, ServiceType $serviceType): JsonResponse
     {
         $data = $request->validate([
             'transport_mode_id' => 'sometimes|exists:transport_modes,id',
@@ -167,19 +184,21 @@ class MasterDataController extends Controller
             'is_active' => 'boolean',
         ]);
         $serviceType->update($data);
+
         return response()->json(['data' => $serviceType]);
     }
 
-    public function destroyServiceType(\App\Models\ServiceType $serviceType): JsonResponse
+    public function destroyServiceType(ServiceType $serviceType): JsonResponse
     {
         $serviceType->delete();
+
         return response()->json(['message' => 'Service type berhasil dihapus.']);
     }
 
     // ── CONTAINER TYPES ──
     public function containerTypes(Request $request): JsonResponse
     {
-        $query = \App\Models\ContainerType::query();
+        $query = ContainerType::query();
         if ($request->filled('search')) {
             $s = $request->search;
             $query->where(function ($q) use ($s) {
@@ -210,10 +229,11 @@ class MasterDataController extends Controller
             'height' => 'nullable|numeric',
             'is_active' => 'boolean',
         ]);
-        return response()->json(['data' => \App\Models\ContainerType::create($data)], 201);
+
+        return response()->json(['data' => ContainerType::create($data)], 201);
     }
 
-    public function updateContainerType(Request $request, \App\Models\ContainerType $containerType): JsonResponse
+    public function updateContainerType(Request $request, ContainerType $containerType): JsonResponse
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -226,19 +246,21 @@ class MasterDataController extends Controller
             'is_active' => 'boolean',
         ]);
         $containerType->update($data);
+
         return response()->json(['data' => $containerType]);
     }
 
-    public function destroyContainerType(\App\Models\ContainerType $containerType): JsonResponse
+    public function destroyContainerType(ContainerType $containerType): JsonResponse
     {
         $containerType->delete();
+
         return response()->json(['message' => 'Container type berhasil dihapus.']);
     }
 
     // ── ADDITIONAL SERVICES ──
     public function additionalServices(Request $request): JsonResponse
     {
-        $query = \App\Models\AdditionalService::query();
+        $query = AdditionalService::query();
         if ($request->filled('category')) {
             $query->where('category', $request->category);
         }
@@ -266,10 +288,11 @@ class MasterDataController extends Controller
             'base_price' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
-        return response()->json(['data' => \App\Models\AdditionalService::create($data)], 201);
+
+        return response()->json(['data' => AdditionalService::create($data)], 201);
     }
 
-    public function updateAdditionalService(Request $request, \App\Models\AdditionalService $additionalService): JsonResponse
+    public function updateAdditionalService(Request $request, AdditionalService $additionalService): JsonResponse
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -279,12 +302,285 @@ class MasterDataController extends Controller
             'is_active' => 'boolean',
         ]);
         $additionalService->update($data);
+
         return response()->json(['data' => $additionalService]);
     }
 
-    public function destroyAdditionalService(\App\Models\AdditionalService $additionalService): JsonResponse
+    public function destroyAdditionalService(AdditionalService $additionalService): JsonResponse
     {
         $additionalService->delete();
+
         return response()->json(['message' => 'Additional service berhasil dihapus.']);
+    }
+
+    // ── TRAINS ──
+    public function trains(Request $request): JsonResponse
+    {
+        $query = Train::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 15));
+    }
+
+    public function storeTrain(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:30|unique:trains,code',
+            'is_active' => 'boolean',
+        ]);
+
+        return response()->json(['data' => Train::create($data)], 201);
+    }
+
+    public function updateTrain(Request $request, Train $train): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'code' => "nullable|string|max:30|unique:trains,code,{$train->id}",
+            'is_active' => 'boolean',
+        ]);
+        $train->update($data);
+
+        return response()->json(['data' => $train]);
+    }
+
+    public function destroyTrain(Train $train): JsonResponse
+    {
+        $train->delete();
+
+        return response()->json(['message' => 'Kereta berhasil dihapus.']);
+    }
+
+    // ── TRAIN CARS ──
+    public function trainCars(Request $request): JsonResponse
+    {
+        $query = TrainCar::query()->with('train:id,name');
+
+        if ($request->filled('train_id')) {
+            $query->where('train_id', $request->train_id);
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('train_id')->orderBy('name')->paginate($request->per_page ?? 15));
+    }
+
+    public function storeTrainCar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'train_id' => 'required|exists:trains,id',
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:30',
+            'capacity_weight' => 'nullable|numeric|min:0',
+            'capacity_cbm' => 'nullable|numeric|min:0',
+            'is_active' => 'boolean',
+        ]);
+
+        if (! empty($data['code'])) {
+            $request->validate([
+                'code' => "unique:train_cars,code,NULL,id,train_id,{$data['train_id']}",
+            ]);
+        }
+
+        return response()->json(['data' => TrainCar::create($data)], 201);
+    }
+
+    public function updateTrainCar(Request $request, TrainCar $trainCar): JsonResponse
+    {
+        $data = $request->validate([
+            'train_id' => 'sometimes|exists:trains,id',
+            'name' => 'sometimes|string|max:255',
+            'code' => 'nullable|string|max:30',
+            'capacity_weight' => 'nullable|numeric|min:0',
+            'capacity_cbm' => 'nullable|numeric|min:0',
+            'is_active' => 'boolean',
+        ]);
+
+        $trainId = $data['train_id'] ?? $trainCar->train_id;
+        $code = array_key_exists('code', $data) ? $data['code'] : $trainCar->code;
+        if (! empty($code)) {
+            $request->validate([
+                'code' => "unique:train_cars,code,{$trainCar->id},id,train_id,{$trainId}",
+            ]);
+        }
+
+        $trainCar->update($data);
+
+        return response()->json(['data' => $trainCar->load('train:id,name')]);
+    }
+
+    public function destroyTrainCar(TrainCar $trainCar): JsonResponse
+    {
+        $trainCar->delete();
+
+        return response()->json(['message' => 'Gerbong berhasil dihapus.']);
+    }
+
+    // ── CARGO CATEGORIES ──
+    public function cargoCategories(Request $request): JsonResponse
+    {
+        $query = CargoCategory::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                    ->orWhere('code', 'like', "%{$s}%");
+            });
+        }
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 15));
+    }
+
+    public function storeCargoCategory(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'requires_temperature' => 'boolean',
+            'is_project_cargo' => 'boolean',
+            'is_liquid' => 'boolean',
+            'is_food' => 'boolean',
+        ]);
+
+        return response()->json(['data' => CargoCategory::create($data)], 201);
+    }
+
+    public function updateCargoCategory(Request $request, CargoCategory $cargoCategory): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'code' => "nullable|string|max:20|unique:cargo_categories,code,{$cargoCategory->id}",
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+            'requires_temperature' => 'boolean',
+            'is_project_cargo' => 'boolean',
+            'is_liquid' => 'boolean',
+            'is_food' => 'boolean',
+        ]);
+        $cargoCategory->update($data);
+
+        return response()->json(['data' => $cargoCategory]);
+    }
+
+    public function destroyCargoCategory(CargoCategory $cargoCategory): JsonResponse
+    {
+        $cargoCategory->delete();
+
+        return response()->json(['message' => 'Kategori kargo berhasil dihapus.']);
+    }
+
+    // ── DG CLASSES ──
+    public function dgClasses(Request $request): JsonResponse
+    {
+        $query = DgClass::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where('name', 'like', "%{$s}%")->orWhere('code', 'like', "%{$s}%");
+        }
+        return response()->json($query->orderBy('code')->paginate($request->per_page ?? 15));
+    }
+
+    public function storeDgClass(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:20|unique:dg_classes,code',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+        return response()->json(['data' => DgClass::create($data)], 201);
+    }
+
+    public function updateDgClass(Request $request, DgClass $dgClass): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'code' => "sometimes|string|max:20|unique:dg_classes,code,{$dgClass->id}",
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+        $dgClass->update($data);
+        return response()->json(['data' => $dgClass]);
+    }
+
+    public function destroyDgClass(DgClass $dgClass): JsonResponse
+    {
+        $dgClass->delete();
+        return response()->json(['message' => 'DG Class berhasil dihapus.']);
+    }
+
+    // ── ADDITIONAL CHARGES ──
+    public function additionalCharges(Request $request): JsonResponse
+    {
+        $query = AdditionalCharge::query();
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where('name', 'like', "%{$s}%")->orWhere('code', 'like', "%{$s}%");
+        }
+        return response()->json($query->orderBy('name')->paginate($request->per_page ?? 15));
+    }
+
+    public function storeAdditionalCharge(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:30|unique:additional_charges,code',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+        return response()->json(['data' => AdditionalCharge::create($data)], 201);
+    }
+
+    public function updateAdditionalCharge(Request $request, AdditionalCharge $additionalCharge): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'code' => "sometimes|string|max:30|unique:additional_charges,code,{$additionalCharge->id}",
+            'description' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+        $additionalCharge->update($data);
+        return response()->json(['data' => $additionalCharge]);
+    }
+
+    public function destroyAdditionalCharge(AdditionalCharge $additionalCharge): JsonResponse
+    {
+        $additionalCharge->delete();
+        return response()->json(['message' => 'Additional Charge berhasil dihapus.']);
     }
 }

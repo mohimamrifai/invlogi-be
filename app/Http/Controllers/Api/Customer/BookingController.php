@@ -78,13 +78,48 @@ class BookingController extends Controller
             'container_count' => 'nullable|integer|min:1',
             'estimated_weight' => 'nullable|numeric|min:0',
             'estimated_cbm' => 'nullable|numeric|min:0',
-            'cargo_description' => 'nullable|string',
-            'pickup_date' => 'nullable|date|after_or_equal:today',
+            'cargo_category_id' => 'required|exists:cargo_categories,id',
+            'cargo_description' => [
+                'nullable', 'string',
+                // Rule 8.3: Mixed Cargo requires description
+                function ($attribute, $value, $fail) use ($request) {
+                    $cat = \App\Models\CargoCategory::find($request->cargo_category_id);
+                    if ($cat && $cat->code === 'MIX' && empty($value)) {
+                        $fail('Deskripsi barang wajib diisi untuk kategori Mixed Cargo.');
+                    }
+                }
+            ],
+            'departure_date' => 'nullable|date|after_or_equal:today',
+            'shipper_name' => 'required|string|max:255',
+            'shipper_address' => 'required|string',
+            'shipper_phone' => 'required|string|max:50',
+            'consignee_name' => 'required|string|max:255',
+            'consignee_address' => 'required|string',
+            'consignee_phone' => 'required|string|max:50',
             'notes' => 'nullable|string',
-            'additional_services' => 'nullable|array',
-            'additional_services.*.id' => 'exists:additional_services,id',
-            'additional_services.*.notes' => 'nullable|string',
+            'additional_services' => 'nullable', // Can be JSON string from FormData
+            
+            // New fields with strict validation
+            'is_dangerous_goods' => 'nullable|boolean',
+            'dg_class_id' => 'required_if:is_dangerous_goods,1|exists:dg_classes,id',
+            'un_number' => 'required_if:is_dangerous_goods,1|string|max:50',
+            'msds_file' => 'required_if:is_dangerous_goods,1|file|mimes:pdf|max:5120',
+            'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
+            'temperature' => [
+                'nullable', 'numeric',
+                function ($attribute, $value, $fail) use ($request) {
+                    $cat = \App\Models\CargoCategory::find($request->cargo_category_id);
+                    if ($cat && $cat->requires_temperature && $value === null) {
+                        $fail('Suhu (temperature) wajib diisi untuk kategori kargo ini.');
+                    }
+                }
+            ],
         ]);
+
+        // Handle additional_services if it came from FormData as a JSON string
+        if (is_string($request->additional_services)) {
+            $data['additional_services'] = json_decode($request->additional_services, true);
+        }
 
         $estimateParams = [
             'origin_location_id' => $data['origin_location_id'],
@@ -100,12 +135,20 @@ class BookingController extends Controller
         ];
         $estimate = $this->priceEstimateService->estimate($estimateParams);
 
+        // Handle MSDS file upload
+        $msdsPath = null;
+        if ($request->hasFile('msds_file')) {
+            $msdsPath = $request->file('msds_file')->store('msds_files', 'public');
+        }
+
         $booking = Booking::create([
             ...$data,
             'company_id' => $user->company_id,
             'user_id' => $user->id,
             'status' => 'submitted',
             'estimated_price' => $estimate['estimated_price'],
+            'msds_file' => $msdsPath,
+            'additional_services' => null, // Remove from data array to avoid conflict with relationship
         ]);
 
         // Tambah layanan tambahan
@@ -139,5 +182,23 @@ class BookingController extends Controller
         ]);
 
         return response()->json(['data' => $booking]);
+    }
+
+    public function cancel(Request $request, Booking $booking): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($booking->company_id !== $user->company_id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        // Hanya bisa cancel jika status masih 'submitted'
+        if ($booking->status !== 'submitted') {
+            return response()->json(['message' => 'Hanya booking dengan status "Submitted" yang dapat dibatalkan.'], 422);
+        }
+
+        $booking->update(['status' => 'cancelled']);
+
+        return response()->json(['message' => 'Booking berhasil dibatalkan.', 'data' => $booking]);
     }
 }

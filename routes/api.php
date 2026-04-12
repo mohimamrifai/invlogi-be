@@ -1,29 +1,29 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Api\Admin\BranchController;
+use App\Http\Controllers\Api\Admin\CompanyController;
+use App\Http\Controllers\Api\Admin\CustomerDiscountController;
+use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Api\Admin\InvoiceController as AdminInvoiceController;
+use App\Http\Controllers\Api\Admin\MasterDataController;
+use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Api\Admin\ShipmentController as AdminShipmentController;
+use App\Http\Controllers\Api\Admin\UserController;
+use App\Http\Controllers\Api\Admin\VendorController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Customer\BookingController as CustomerBookingController;
+use App\Http\Controllers\Api\Customer\CompanyController as CustomerCompanyController;
+use App\Http\Controllers\Api\Customer\DashboardController as CustomerDashboardController;
+use App\Http\Controllers\Api\Customer\InvoiceController as CustomerInvoiceController;
+use App\Http\Controllers\Api\Customer\MasterDataReadController;
+use App\Http\Controllers\Api\Customer\PaymentController as CustomerPaymentController;
+use App\Http\Controllers\Api\Customer\RegistrationController;
+use App\Http\Controllers\Api\Customer\ShipmentController as CustomerShipmentController;
 use App\Http\Controllers\Api\MidtransWebhookController;
 use App\Http\Controllers\Api\PublicBookingEstimateController;
 use App\Http\Controllers\Api\PublicTrackingController;
-use App\Http\Controllers\Api\Customer\MasterDataReadController;
-use App\Http\Controllers\Api\Customer\RegistrationController;
-use App\Http\Controllers\Api\Customer\BookingController as CustomerBookingController;
-use App\Http\Controllers\Api\Customer\ShipmentController as CustomerShipmentController;
-use App\Http\Controllers\Api\Customer\InvoiceController as CustomerInvoiceController;
-use App\Http\Controllers\Api\Customer\PaymentController as CustomerPaymentController;
-use App\Http\Controllers\Api\Customer\CompanyController as CustomerCompanyController;
-use App\Http\Controllers\Api\Customer\DashboardController as CustomerDashboardController;
-use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Api\Admin\CompanyController;
-use App\Http\Controllers\Api\Admin\UserController;
-use App\Http\Controllers\Api\Admin\MasterDataController;
-use App\Http\Controllers\Api\Admin\BookingController as AdminBookingController;
-use App\Http\Controllers\Api\Admin\ShipmentController as AdminShipmentController;
-use App\Http\Controllers\Api\Admin\InvoiceController as AdminInvoiceController;
-use App\Http\Controllers\Api\Admin\VendorController;
-use App\Http\Controllers\Api\Admin\BranchController;
-use App\Http\Controllers\Api\Admin\CustomerDiscountController;
-use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,8 +36,10 @@ use App\Http\Controllers\Api\Admin\PaymentController as AdminPaymentController;
 // ══════════════════════════════════════════════
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [RegistrationController::class, 'register']);
-Route::get('/tracking', [PublicTrackingController::class, 'track']);
-Route::get('/tracking/waybill-pdf', [PublicTrackingController::class, 'waybillPdf']);
+Route::post('/forgot-password', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'reset']);
+Route::get('/tracking', [PublicTrackingController::class, 'track'])->name('public.tracking');
+Route::get('/tracking/consignment-note-pdf', [PublicTrackingController::class, 'consignmentNotePdf']);
 
 // Master data + estimasi biaya (tanpa login, untuk landing / halaman publik)
 Route::prefix('public')->group(function () {
@@ -46,6 +48,9 @@ Route::prefix('public')->group(function () {
     Route::get('master/service-types', [MasterDataReadController::class, 'serviceTypes']);
     Route::get('master/container-types', [MasterDataReadController::class, 'containerTypes']);
     Route::get('master/additional-services', [MasterDataReadController::class, 'additionalServices']);
+    Route::get('master/cargo-categories', [MasterDataReadController::class, 'cargoCategories']);
+    Route::get('master/dg-classes', [MasterDataReadController::class, 'dgClasses']);
+    Route::get('master/additional-charges', [MasterDataReadController::class, 'additionalCharges']);
     Route::post('bookings/estimate-price', [PublicBookingEstimateController::class, 'estimate']);
 });
 // Midtrans notification (no auth - called by Midtrans)
@@ -88,6 +93,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // User Management
         Route::apiResource('users', UserController::class);
 
+        // Role & Permission Management
+        Route::get('roles', [\App\Http\Controllers\Api\Admin\RoleManagementController::class, 'index']);
+        Route::post('roles', [\App\Http\Controllers\Api\Admin\RoleManagementController::class, 'storeRole']);
+        Route::get('permissions', [\App\Http\Controllers\Api\Admin\RoleManagementController::class, 'permissions']);
+        Route::put('roles/{role}/permissions', [\App\Http\Controllers\Api\Admin\RoleManagementController::class, 'updateRolePermissions']);
+
         // Master Data – Locations
         Route::get('locations', [MasterDataController::class, 'locations']);
         Route::post('locations', [MasterDataController::class, 'storeLocation']);
@@ -118,8 +129,40 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('additional-services/{additionalService}', [MasterDataController::class, 'updateAdditionalService']);
         Route::delete('additional-services/{additionalService}', [MasterDataController::class, 'destroyAdditionalService']);
 
+        // Master Data – Trains (Rail)
+        Route::get('trains', [MasterDataController::class, 'trains']);
+        Route::post('trains', [MasterDataController::class, 'storeTrain']);
+        Route::put('trains/{train}', [MasterDataController::class, 'updateTrain']);
+        Route::delete('trains/{train}', [MasterDataController::class, 'destroyTrain']);
+
+        // Master Data – Train Cars (Gerbong)
+        Route::get('train-cars', [MasterDataController::class, 'trainCars']);
+        Route::post('train-cars', [MasterDataController::class, 'storeTrainCar']);
+        Route::put('train-cars/{trainCar}', [MasterDataController::class, 'updateTrainCar']);
+        Route::delete('train-cars/{trainCar}', [MasterDataController::class, 'destroyTrainCar']);
+
+        // Master Data – Cargo Categories
+        Route::get('cargo-categories', [MasterDataController::class, 'cargoCategories']);
+        Route::post('cargo-categories', [MasterDataController::class, 'storeCargoCategory']);
+        Route::put('cargo-categories/{cargoCategory}', [MasterDataController::class, 'updateCargoCategory']);
+        Route::delete('cargo-categories/{cargoCategory}', [MasterDataController::class, 'destroyCargoCategory']);
+
+        // Master Data – DG Classes
+        Route::get('dg-classes', [MasterDataController::class, 'dgClasses']);
+        Route::post('dg-classes', [MasterDataController::class, 'storeDgClass']);
+        Route::put('dg-classes/{dgClass}', [MasterDataController::class, 'updateDgClass']);
+        Route::delete('dg-classes/{dgClass}', [MasterDataController::class, 'destroyDgClass']);
+
+        // Master Data – Additional Charges
+        Route::get('additional-charges', [MasterDataController::class, 'additionalCharges']);
+        Route::post('additional-charges', [MasterDataController::class, 'storeAdditionalCharge']);
+        Route::put('additional-charges/{additionalCharge}', [MasterDataController::class, 'updateAdditionalCharge']);
+        Route::delete('additional-charges/{additionalCharge}', [MasterDataController::class, 'destroyAdditionalCharge']);
+
         // Booking Management
         Route::get('bookings', [AdminBookingController::class, 'index']);
+        Route::post('bookings', [AdminBookingController::class, 'store']);
+        Route::post('bookings/estimate-price', [AdminBookingController::class, 'estimatePrice']);
         Route::get('bookings/{booking}', [AdminBookingController::class, 'show']);
         Route::post('bookings/{booking}/approve', [AdminBookingController::class, 'approve']);
         Route::post('bookings/{booking}/reject', [AdminBookingController::class, 'reject']);
@@ -135,7 +178,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('shipments/{shipment}/items', [AdminShipmentController::class, 'addItem']);
         Route::put('shipment-items/{item}', [AdminShipmentController::class, 'updateItem']);
         Route::delete('shipment-items/{item}', [AdminShipmentController::class, 'destroyItem']);
-        Route::get('shipments/{shipment}/waybill-pdf', [AdminShipmentController::class, 'downloadWaybillPdf']);
+        Route::get('shipments/{shipment}/consignment-note-pdf', [AdminShipmentController::class, 'downloadConsignmentNotePdf']);
 
         // Invoice Management
         Route::get('invoices', [AdminInvoiceController::class, 'index']);
@@ -173,16 +216,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('master/service-types', [MasterDataReadController::class, 'serviceTypes']);
         Route::get('master/container-types', [MasterDataReadController::class, 'containerTypes']);
         Route::get('master/additional-services', [MasterDataReadController::class, 'additionalServices']);
+        Route::get('master/cargo-categories', [MasterDataReadController::class, 'cargoCategories']);
+        Route::get('master/dg-classes', [MasterDataReadController::class, 'dgClasses']);
+        Route::get('master/additional-charges', [MasterDataReadController::class, 'additionalCharges']);
 
         // Booking
         Route::post('bookings/estimate-price', [CustomerBookingController::class, 'estimatePrice']);
         Route::get('bookings', [CustomerBookingController::class, 'index']);
         Route::post('bookings', [CustomerBookingController::class, 'store']);
         Route::get('bookings/{booking}', [CustomerBookingController::class, 'show']);
+        Route::post('bookings/{booking}/cancel', [CustomerBookingController::class, 'cancel']);
 
         // Shipment
         Route::get('shipments', [CustomerShipmentController::class, 'index']);
         Route::get('shipments/{shipment}', [CustomerShipmentController::class, 'show']);
+        Route::get('shipments/{shipment}/consignment-note-pdf', [CustomerShipmentController::class, 'downloadConsignmentNotePdf']);
 
         // Invoice
         Route::get('invoices', [CustomerInvoiceController::class, 'index']);

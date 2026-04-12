@@ -11,7 +11,11 @@ class ShipmentTrackingPhoto extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['shipment_tracking_id', 'path', 'caption'];
+    protected $fillable = ['shipment_tracking_id', 'path', 'caption', 'is_public'];
+
+    protected $casts = [
+        'is_public' => 'boolean',
+    ];
 
     protected $appends = ['url'];
 

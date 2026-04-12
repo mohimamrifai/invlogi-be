@@ -18,8 +18,12 @@ class Booking extends Model
         'origin_location_id', 'destination_location_id',
         'transport_mode_id', 'service_type_id',
         'container_type_id', 'container_count',
-        'estimated_weight', 'estimated_cbm',
-        'cargo_description', 'pickup_date',
+        'cargo_category_id', 'estimated_weight', 'estimated_cbm',
+        'cargo_description', 'departure_date',
+        'is_dangerous_goods', 'dg_class_id', 'un_number', 'msds_file',
+        'equipment_condition', 'temperature',
+        'shipper_name', 'shipper_address', 'shipper_phone',
+        'consignee_name', 'consignee_address', 'consignee_phone',
         'estimated_price', 'status',
         'rejection_reason', 'notes',
         'approved_by', 'approved_at',
@@ -28,12 +32,14 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
-            'pickup_date' => 'date',
+            'departure_date' => 'date',
             'approved_at' => 'datetime',
             'estimated_weight' => 'decimal:2',
             'estimated_cbm' => 'decimal:2',
             'estimated_price' => 'decimal:2',
             'container_count' => 'integer',
+            'is_dangerous_goods' => 'boolean',
+            'temperature' => 'decimal:2',
         ];
     }
 
@@ -88,11 +94,28 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function cargoCategory(): BelongsTo
+    {
+        return $this->belongsTo(CargoCategory::class);
+    }
+
     public function additionalServices(): BelongsToMany
     {
         return $this->belongsToMany(AdditionalService::class, 'booking_additional_service')
             ->withPivot(['notes', 'price'])
             ->withTimestamps();
+    }
+
+    public function additionalCharges(): BelongsToMany
+    {
+        return $this->belongsToMany(AdditionalCharge::class, 'booking_additional_charge')
+            ->withPivot(['amount', 'is_auto_triggered'])
+            ->withTimestamps();
+    }
+
+    public function dgClass(): BelongsTo
+    {
+        return $this->belongsTo(DgClass::class);
     }
 
     public function shipment(): HasOne
