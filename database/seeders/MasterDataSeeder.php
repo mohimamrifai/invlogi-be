@@ -184,39 +184,42 @@ class MasterDataSeeder extends Seeder
     private function seedAdditionalServices(): void
     {
         $rows = [
-            ['name' => 'Pickup Service', 'category' => 'pickup', 'description' => 'Penjemputan barang dari alamat pengirim', 'base_price' => 350000],
-            ['name' => 'Pickup Bandara', 'category' => 'pickup', 'description' => 'Pickup kargo dari area bandara', 'base_price' => 500000],
-            ['name' => 'Pickup Pelabuhan', 'category' => 'pickup', 'description' => 'Pickup kontainer dari pelabuhan', 'base_price' => 750000],
-            ['name' => 'Pickup Malam', 'category' => 'pickup', 'description' => 'Pickup di luar jam kerja', 'base_price' => 450000],
-            ['name' => 'Palletizing', 'category' => 'packing', 'description' => 'Pengemasan dengan pallet kayu', 'base_price' => 200000],
-            ['name' => 'Wooden Crate', 'category' => 'packing', 'description' => 'Pengemasan dengan peti kayu', 'base_price' => 450000],
-            ['name' => 'Bubble Wrap', 'category' => 'packing', 'description' => 'Pelindung bubble wrap', 'base_price' => 75000],
-            ['name' => 'Reboxing', 'category' => 'packing', 'description' => 'Pengemasan ulang ke box baru', 'base_price' => 125000],
-            ['name' => 'Vacuum Pack', 'category' => 'packing', 'description' => 'Vacuum packaging untuk tekstil', 'base_price' => 180000],
-            ['name' => 'Shrink Wrap', 'category' => 'packing', 'description' => 'Shrink wrap palet', 'base_price' => 95000],
-            ['name' => 'ISPM15 Treatment', 'category' => 'packing', 'description' => 'Treatment kayu ekspor', 'base_price' => 275000],
-            ['name' => 'Forklift Handling', 'category' => 'handling', 'description' => 'Penanganan menggunakan forklift', 'base_price' => 300000],
-            ['name' => 'Fragile Handling', 'category' => 'handling', 'description' => 'Penanganan barang mudah pecah', 'base_price' => 250000],
-            ['name' => 'Heavy Cargo Handling', 'category' => 'handling', 'description' => 'Penanganan kargo berat', 'base_price' => 600000],
-            ['name' => 'Crane Lift', 'category' => 'handling', 'description' => 'Angkat dengan mobile crane', 'base_price' => 2500000],
-            ['name' => 'Sortir Gudang', 'category' => 'handling', 'description' => 'Sortir dan staging barang', 'base_price' => 175000],
-            ['name' => 'Labeling & Marking', 'category' => 'other', 'description' => 'Label SSCC dan marking', 'base_price' => 85000],
-            ['name' => 'Dokumen Customs', 'category' => 'other', 'description' => 'Bantuan dokumen kepabeanan', 'base_price' => 400000],
-            ['name' => 'Asuransi Kargo Dasar', 'category' => 'other', 'description' => 'Asuransi dasar per invoice', 'base_price' => 150000],
-            ['name' => 'Fumigasi', 'category' => 'other', 'description' => 'Fumigasi kontainer', 'base_price' => 900000],
-            ['name' => 'Storage 3 Hari', 'category' => 'other', 'description' => 'Penyimpanan sementara 3 hari', 'base_price' => 500000],
-            ['name' => 'Chiller Handling', 'category' => 'handling', 'description' => 'Handling suhu terkendali', 'base_price' => 550000],
-            ['name' => 'Oversized Escort', 'category' => 'other', 'description' => 'Escort muatan ODOL', 'base_price' => 3200000],
-            ['name' => 'Cargo Survey', 'category' => 'other', 'description' => 'Survey sebelum pengiriman', 'base_price' => 650000],
-            ['name' => 'Detention Monitoring', 'category' => 'other', 'description' => 'Monitoring demurrage/detention', 'base_price' => 200000],
-            ['name' => 'Free Storage 5 Hari (Origin & Destination)', 'category' => 'other', 'description' => 'Bebas biaya sewa gudang 5 hari', 'base_price' => 0],
-            ['name' => 'LOLO (Lift On-Lift Off)', 'category' => 'handling', 'description' => 'Biaya angkat kontainer', 'base_price' => 0],
-            ['name' => 'Container Rent', 'category' => 'other', 'description' => 'Sewa unit kontainer', 'base_price' => 0],
-            ['name' => 'Free Storage 1 Hari (Origin & Destination)', 'category' => 'other', 'description' => 'Bebas biaya sewa gudang 1 hari', 'base_price' => 0],
+            ['name' => 'Pickup Service',        'code' => 'PICKUP',          'category' => 'pickup',   'description' => 'Penjemputan barang dari alamat pengirim', 'base_price' => 350000],
+            ['name' => 'Pickup Bandara',         'code' => 'PICKUP_APT',      'category' => 'pickup',   'description' => 'Pickup kargo dari area bandara',          'base_price' => 500000],
+            ['name' => 'Pickup Pelabuhan',       'code' => 'PICKUP_PORT',     'category' => 'pickup',   'description' => 'Pickup kontainer dari pelabuhan',         'base_price' => 750000],
+            ['name' => 'Pickup Malam',           'code' => 'PICKUP_NIGHT',    'category' => 'pickup',   'description' => 'Pickup di luar jam kerja',                'base_price' => 450000],
+            ['name' => 'Palletizing',            'code' => 'PALLETIZING',     'category' => 'packing',  'description' => 'Pengemasan dengan pallet kayu',           'base_price' => 200000],
+            ['name' => 'Wooden Crate',           'code' => 'WOODEN_CRATE',    'category' => 'packing',  'description' => 'Pengemasan dengan peti kayu',             'base_price' => 450000],
+            ['name' => 'Bubble Wrap',            'code' => 'BUBBLE_WRAP',     'category' => 'packing',  'description' => 'Pelindung bubble wrap',                   'base_price' => 75000],
+            ['name' => 'Reboxing',               'code' => 'REBOXING',        'category' => 'packing',  'description' => 'Pengemasan ulang ke box baru',            'base_price' => 125000],
+            ['name' => 'Vacuum Pack',            'code' => 'VACUUM_PACK',     'category' => 'packing',  'description' => 'Vacuum packaging untuk tekstil',          'base_price' => 180000],
+            ['name' => 'Shrink Wrap',            'code' => 'SHRINK_WRAP',     'category' => 'packing',  'description' => 'Shrink wrap palet',                       'base_price' => 95000],
+            ['name' => 'ISPM15 Treatment',       'code' => 'ISPM15',          'category' => 'packing',  'description' => 'Treatment kayu ekspor',                   'base_price' => 275000],
+            ['name' => 'Forklift Handling',      'code' => 'FORKLIFT',        'category' => 'handling', 'description' => 'Penanganan menggunakan forklift',         'base_price' => 300000],
+            ['name' => 'Fragile Handling',       'code' => 'FRAGILE',         'category' => 'handling', 'description' => 'Penanganan barang mudah pecah',           'base_price' => 250000],
+            ['name' => 'Heavy Cargo Handling',   'code' => 'HEAVY_CARGO',     'category' => 'handling', 'description' => 'Penanganan kargo berat',                  'base_price' => 600000],
+            ['name' => 'Crane Lift',             'code' => 'CRANE',           'category' => 'handling', 'description' => 'Angkat dengan mobile crane',              'base_price' => 2500000],
+            ['name' => 'Sortir Gudang',          'code' => 'SORTIR',          'category' => 'handling', 'description' => 'Sortir dan staging barang',               'base_price' => 175000],
+            ['name' => 'Labeling & Marking',     'code' => 'LABELING',        'category' => 'other',    'description' => 'Label SSCC dan marking',                  'base_price' => 85000],
+            ['name' => 'Dokumen Customs',        'code' => 'CUSTOMS_DOC',     'category' => 'other',    'description' => 'Bantuan dokumen kepabeanan',              'base_price' => 400000],
+            ['name' => 'Asuransi Kargo Dasar',   'code' => 'INSURANCE',       'category' => 'other',    'description' => 'Asuransi dasar per invoice',              'base_price' => 150000],
+            ['name' => 'Fumigasi',               'code' => 'FUMIGASI',        'category' => 'other',    'description' => 'Fumigasi kontainer',                      'base_price' => 900000],
+            ['name' => 'Storage 3 Hari',         'code' => 'STORAGE_3D',      'category' => 'other',    'description' => 'Penyimpanan sementara 3 hari',            'base_price' => 500000],
+            ['name' => 'Chiller Handling',       'code' => 'CHILLER',         'category' => 'handling', 'description' => 'Handling suhu terkendali',                'base_price' => 550000],
+            ['name' => 'Oversized Escort',       'code' => 'ESCORT',          'category' => 'other',    'description' => 'Escort muatan ODOL',                      'base_price' => 3200000],
+            ['name' => 'Cargo Survey',           'code' => 'SURVEY',          'category' => 'other',    'description' => 'Survey sebelum pengiriman',               'base_price' => 650000],
+            ['name' => 'Detention Monitoring',   'code' => 'DETENTION',       'category' => 'other',    'description' => 'Monitoring demurrage/detention',          'base_price' => 200000],
+            // ── Mandatory add-ons (code is the stable identifier) ──────────────────
+            ['name' => 'Free Storage 5 Hari (Origin & Destination)', 'code' => 'FREE_STORAGE_FCL', 'category' => 'other',    'description' => 'Bebas biaya sewa gudang 5 hari', 'base_price' => 0],
+            ['name' => 'LOLO (Lift On-Lift Off)',                    'code' => 'LOLO',             'category' => 'handling', 'description' => 'Biaya angkat kontainer',         'base_price' => 0],
+            ['name' => 'Container Rent',                             'code' => 'CONTAINER_RENT',   'category' => 'other',    'description' => 'Sewa unit kontainer',             'base_price' => 0],
+            ['name' => 'Free Storage 1 Hari (Origin & Destination)', 'code' => 'FREE_STORAGE_LCL', 'category' => 'other',    'description' => 'Bebas biaya sewa gudang 1 hari', 'base_price' => 0],
         ];
 
         foreach ($rows as $svc) {
-            AdditionalService::firstOrCreate(['name' => $svc['name']], $svc);
+            // Use 'code' as the stable unique key for firstOrCreate (fallback to name if no code).
+            $key = isset($svc['code']) ? ['code' => $svc['code']] : ['name' => $svc['name']];
+            AdditionalService::firstOrCreate($key, array_merge($svc, ['is_active' => true]));
         }
     }
 

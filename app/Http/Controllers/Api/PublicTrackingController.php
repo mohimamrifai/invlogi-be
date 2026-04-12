@@ -77,4 +77,27 @@ class PublicTrackingController extends Controller
 
         return $pdf->download('consignment-note-' . $shipment->waybill_number . '.pdf');
     }
+
+    /**
+     * Download Waybill PDF by waybill number (public, no login).
+     */
+    public function waybillPdf(Request $request)
+    {
+        $request->validate(['waybill' => 'required|string']);
+
+        $shipment = Shipment::where('waybill_number', $request->waybill)
+            ->with([
+                'originLocation', 'destinationLocation', 'serviceType',
+                'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc'),
+            ])
+            ->first();
+
+        if (! $shipment) {
+            return response()->json(['message' => 'Pengiriman tidak ditemukan.'], 404);
+        }
+
+        $pdf = Pdf::loadView('pdf.waybill', ['shipment' => $shipment]);
+
+        return $pdf->download('waybill-' . $shipment->waybill_number . '.pdf');
+    }
 }

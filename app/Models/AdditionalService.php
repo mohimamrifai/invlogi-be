@@ -9,7 +9,7 @@ class AdditionalService extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'category', 'description', 'base_price', 'is_active'];
+    protected $fillable = ['name', 'code', 'category', 'description', 'base_price', 'is_active'];
 
     protected function casts(): array
     {

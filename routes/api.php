@@ -40,6 +40,7 @@ Route::post('/forgot-password', [\App\Http\Controllers\Api\ForgotPasswordControl
 Route::post('/reset-password', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'reset']);
 Route::get('/tracking', [PublicTrackingController::class, 'track'])->name('public.tracking');
 Route::get('/tracking/consignment-note-pdf', [PublicTrackingController::class, 'consignmentNotePdf']);
+Route::get('/tracking/waybill-pdf', [PublicTrackingController::class, 'waybillPdf']);
 
 // Master data + estimasi biaya (tanpa login, untuk landing / halaman publik)
 Route::prefix('public')->group(function () {
@@ -179,6 +180,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('shipment-items/{item}', [AdminShipmentController::class, 'updateItem']);
         Route::delete('shipment-items/{item}', [AdminShipmentController::class, 'destroyItem']);
         Route::get('shipments/{shipment}/consignment-note-pdf', [AdminShipmentController::class, 'downloadConsignmentNotePdf']);
+        Route::get('shipments/{shipment}/waybill-pdf', [AdminShipmentController::class, 'downloadWaybillPdf']);
 
         // Invoice Management
         Route::get('invoices', [AdminInvoiceController::class, 'index']);
@@ -231,6 +233,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('shipments', [CustomerShipmentController::class, 'index']);
         Route::get('shipments/{shipment}', [CustomerShipmentController::class, 'show']);
         Route::get('shipments/{shipment}/consignment-note-pdf', [CustomerShipmentController::class, 'downloadConsignmentNotePdf']);
+        Route::get('shipments/{shipment}/waybill-pdf', [CustomerShipmentController::class, 'downloadWaybillPdf']);
 
         // Invoice
         Route::get('invoices', [CustomerInvoiceController::class, 'index']);

@@ -198,4 +198,16 @@ class ShipmentController extends Controller
 
         return $pdf->download('consignment-note-' . $shipment->waybill_number . '.pdf');
     }
+
+    public function downloadWaybillPdf(Shipment $shipment)
+    {
+        $shipment->load([
+            'originLocation', 'destinationLocation', 'serviceType',
+            'trackings' => fn ($q) => $q->orderBy('tracked_at', 'asc'),
+        ]);
+
+        $pdf = Pdf::loadView('pdf.waybill', ['shipment' => $shipment]);
+
+        return $pdf->download('waybill-' . $shipment->waybill_number . '.pdf');
+    }
 }
