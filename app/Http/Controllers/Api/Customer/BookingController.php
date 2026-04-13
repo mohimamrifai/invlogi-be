@@ -100,10 +100,10 @@ class BookingController extends Controller
             'additional_services' => 'nullable', // Can be JSON string from FormData
             
             // New fields with strict validation
-            'is_dangerous_goods' => 'nullable|boolean',
-            'dg_class_id' => 'required_if:is_dangerous_goods,1|exists:dg_classes,id',
-            'un_number' => 'required_if:is_dangerous_goods,1|string|max:50',
-            'msds_file' => 'required_if:is_dangerous_goods,1|file|mimes:pdf|max:5120',
+            'is_dangerous_goods' => 'nullable|in:0,1,true,false',
+            'dg_class_id' => 'nullable|required_if:is_dangerous_goods,1|exists:dg_classes,id',
+            'un_number' => 'nullable|required_if:is_dangerous_goods,1|string|max:50',
+            'msds_file' => 'nullable|required_if:is_dangerous_goods,1|file|mimes:pdf|max:5120',
             'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
             'temperature' => [
                 'nullable', 'numeric',
