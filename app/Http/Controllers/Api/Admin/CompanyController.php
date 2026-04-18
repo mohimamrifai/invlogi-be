@@ -50,6 +50,8 @@ class CompanyController extends Controller
             'phone' => 'nullable|string|max:20',
             'status' => 'nullable|in:pending,active,inactive',
             'billing_cycle' => 'required|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+            'payment_type' => 'required|in:prepaid,postpaid',
+            'postpaid_term_days' => 'nullable|integer|min:0|max:365',
         ]);
 
         $company = Company::create($validated);
@@ -83,6 +85,8 @@ class CompanyController extends Controller
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'billing_cycle' => 'required|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
+            'payment_type' => 'sometimes|required|in:prepaid,postpaid',
+            'postpaid_term_days' => 'nullable|integer|min:0|max:365',
         ]);
 
         $company->update($validated);

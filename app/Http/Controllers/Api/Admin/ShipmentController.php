@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Container;
+use App\Models\Invoice;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
-use App\Models\Container;
-use App\Models\Rack;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,6 +97,45 @@ class ShipmentController extends Controller
 
         // Update status shipment
         $shipment->update(['status' => $data['status']]);
+
+        // Jika shipment selesai dan company menggunakan post-paid, auto-generate invoice jika belum ada.
+        $shipment->loadMissing('company', 'booking', 'invoice');
+        if ($data['status'] === 'completed'
+            && $shipment->company
+            && $shipment->company->payment_type === 'postpaid'
+            && ! $shipment->invoice
+        ) {
+            $booking = $shipment->booking;
+            $base = $booking ? (float) ($booking->estimated_price ?? 0) : 0.0;
+
+            $issuedDate = now();
+            $termDays = (int) ($shipment->company->postpaid_term_days ?? 0);
+            $dueDate = $termDays > 0 ? (clone $issuedDate)->addDays($termDays) : $issuedDate;
+
+            $subtotal = $base;
+            $taxAmount = $subtotal * 0.11;
+            $totalAmount = $subtotal + $taxAmount;
+
+            $invoice = Invoice::create([
+                'shipment_id' => $shipment->id,
+                'company_id' => $shipment->company_id,
+                'issued_date' => $issuedDate->toDateString(),
+                'due_date' => $dueDate->toDateString(),
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'status' => 'unpaid',
+                'notes' => null,
+                'created_by' => $request->user()->id,
+            ]);
+
+            $invoice->items()->create([
+                'description' => 'Freight & services untuk shipment '.$shipment->shipment_number,
+                'quantity' => 1,
+                'unit_price' => $totalAmount,
+                'total_price' => $totalAmount,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Tracking berhasil diperbarui.',

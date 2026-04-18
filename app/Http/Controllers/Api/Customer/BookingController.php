@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Api\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Invoice;
+use App\Models\Shipment;
 use App\Services\BookingPriceEstimateService;
+use App\Services\MidtransService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class BookingController extends Controller
 {
     public function __construct(
-        private BookingPriceEstimateService $priceEstimateService
+        private BookingPriceEstimateService $priceEstimateService,
+        private MidtransService $midtransService,
     ) {}
 
     /**
@@ -159,12 +163,92 @@ class BookingController extends Controller
                 ]);
             }
         }
+        $booking->load(['originLocation', 'destinationLocation', 'serviceType', 'additionalServices', 'company']);
+
+        $prepaidPayload = null;
+
+        // Jika perusahaan menggunakan skema pre-paid, langsung buat shipment, invoice, dan transaksi Midtrans.
+        if ($booking->company && $booking->company->payment_type === 'prepaid') {
+            // Set booking menjadi approved oleh sistem
+            $booking->update([
+                'status' => 'approved',
+                'approved_by' => $user->id,
+                'approved_at' => now(),
+            ]);
+
+            // Buat shipment mirip convertToShipment admin
+            $shipment = Shipment::create([
+                'booking_id' => $booking->id,
+                'company_id' => $booking->company_id,
+                'origin_location_id' => $booking->origin_location_id,
+                'destination_location_id' => $booking->destination_location_id,
+                'transport_mode_id' => $booking->transport_mode_id,
+                'service_type_id' => $booking->service_type_id,
+                'status' => 'created',
+                'created_by' => $user->id,
+                'cargo_category_id' => $booking->cargo_category_id,
+                'is_dangerous_goods' => $booking->is_dangerous_goods,
+                'dg_class_id' => $booking->dg_class_id,
+                'un_number' => $booking->un_number,
+                'msds_file' => $booking->msds_file,
+                'equipment_condition' => $booking->equipment_condition,
+                'temperature' => $booking->temperature,
+            ]);
+
+            $shipment->trackings()->create([
+                'status' => 'created',
+                'notes' => 'Shipment dibuat otomatis (pre-paid) dari booking '.$booking->booking_number,
+                'tracked_at' => now(),
+                'updated_by' => $user->id,
+            ]);
+
+            // Buat invoice dari estimated price
+            $issuedDate = now()->toDateString();
+            $dueDate = $issuedDate; // pre-paid: jatuh tempo sama dengan tanggal terbit
+            $subtotal = (float) ($estimate['estimated_price'] ?? 0);
+            $taxAmount = $subtotal * 0.11;
+            $totalAmount = $subtotal + $taxAmount;
+
+            $invoice = Invoice::create([
+                'shipment_id' => $shipment->id,
+                'company_id' => $booking->company_id,
+                'issued_date' => $issuedDate,
+                'due_date' => $dueDate,
+                'subtotal' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total_amount' => $totalAmount,
+                'status' => 'unpaid',
+                'notes' => null,
+                'created_by' => $user->id,
+            ]);
+
+            $invoice->items()->create([
+                'description' => 'Freight & services untuk booking '.$booking->booking_number,
+                'quantity' => 1,
+                'unit_price' => $totalAmount,
+                'total_price' => $totalAmount,
+            ]);
+
+            // Buat transaksi Midtrans (Snap)
+            $customerDetails = [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ];
+
+            $snap = $this->midtransService->createSnapTransaction($invoice, $customerDetails);
+            $prepaidPayload = [
+                'invoice' => $invoice->load('items'),
+                'midtrans' => $snap,
+            ];
+        }
 
         return response()->json([
             'message' => 'Booking berhasil dibuat.',
-            'data' => $booking->load(['originLocation', 'destinationLocation', 'serviceType', 'additionalServices']),
+            'data' => $booking,
             'estimated_price' => $estimate['estimated_price'],
             'breakdown' => $estimate['breakdown'],
+            'prepaid' => $prepaidPayload,
         ], 201);
     }
 

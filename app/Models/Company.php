@@ -27,6 +27,8 @@ class Company extends Model
         'phone',
         'status',
         'billing_cycle',
+        'payment_type',
+        'postpaid_term_days',
     ];
 
     protected static function booted(): void
