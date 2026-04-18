@@ -24,7 +24,7 @@ class BookingController extends Controller
             'destinationLocation:id,name,code',
             'serviceType:id,name,code',
             'transportMode:id,name',
-        ]);
+        ])->withExists('shipment');
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -52,8 +52,101 @@ class BookingController extends Controller
             'transportMode', 'serviceType', 'containerType',
             'additionalServices', 'shipment', 'approvedByUser:id,name',
         ]);
+        $booking->setAttribute('has_shipment', $booking->shipment()->exists());
 
         return response()->json(['data' => $booking]);
+    }
+
+    public function update(Request $request, Booking $booking): JsonResponse
+    {
+        if (! $request->user()?->hasAnyRole(['super_admin', 'operations'])) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        if ($booking->shipment()->exists()) {
+            return response()->json(['message' => 'Booking yang sudah memiliki shipment tidak bisa diubah.'], 422);
+        }
+
+        if ($booking->status === 'cancelled') {
+            return response()->json(['message' => 'Booking yang sudah dibatalkan tidak bisa diubah.'], 422);
+        }
+
+        if (is_string($request->additional_services)) {
+            $request->merge([
+                'additional_services' => json_decode($request->additional_services, true),
+            ]);
+        }
+
+        $data = $request->validate([
+            'origin_location_id' => 'required|exists:locations,id',
+            'destination_location_id' => 'required|exists:locations,id',
+            'transport_mode_id' => 'required|exists:transport_modes,id',
+            'service_type_id' => 'required|exists:service_types,id',
+            'container_type_id' => 'nullable|exists:container_types,id',
+            'container_count' => 'nullable|integer|min:1',
+            'estimated_weight' => 'nullable|numeric|min:0',
+            'estimated_cbm' => 'nullable|numeric|min:0',
+            'cargo_category_id' => 'required|exists:cargo_categories,id',
+            'departure_date' => 'nullable|date',
+            'cargo_description' => 'nullable|string|max:2000',
+            'shipper_name' => 'required|string|max:255',
+            'shipper_address' => 'required|string',
+            'shipper_phone' => 'required|string|max:50',
+            'consignee_name' => 'required|string|max:255',
+            'consignee_address' => 'required|string',
+            'consignee_phone' => 'required|string|max:50',
+            'additional_services' => 'nullable',
+            'additional_services.*.id' => 'required|exists:additional_services,id',
+            'additional_services.*.notes' => 'nullable|string|max:2000',
+            'is_dangerous_goods' => 'nullable|boolean',
+            'dg_class_id' => 'nullable|exists:dg_classes,id',
+            'un_number' => 'nullable|string|max:50',
+            'msds_file' => 'nullable|file|mimes:pdf|max:5120',
+            'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
+            'temperature' => 'nullable|numeric',
+        ]);
+
+        $estimateParams = [
+            ...$data,
+            'additional_services' => array_column($data['additional_services'] ?? [], 'id'),
+            'container_count' => $data['container_count'] ?? 1,
+            'estimated_weight' => (float) ($data['estimated_weight'] ?? 0),
+            'estimated_cbm' => (float) ($data['estimated_cbm'] ?? 0),
+        ];
+        $estimate = $this->priceEstimateService->estimate($estimateParams);
+
+        $msdsPath = $booking->msds_file;
+        if ($request->hasFile('msds_file')) {
+            $msdsPath = $request->file('msds_file')->store('msds_files', 'public');
+        }
+
+        $payload = [
+            ...$data,
+            'estimated_price' => $estimate['estimated_price'],
+            'msds_file' => ! empty($data['is_dangerous_goods']) ? $msdsPath : null,
+            'dg_class_id' => ! empty($data['is_dangerous_goods']) ? ($data['dg_class_id'] ?? null) : null,
+            'un_number' => ! empty($data['is_dangerous_goods']) ? ($data['un_number'] ?? null) : null,
+        ];
+
+        unset($payload['additional_services']);
+        $booking->update($payload);
+
+        $booking->additionalServices()->sync(
+            collect($data['additional_services'] ?? [])->mapWithKeys(fn ($svc) => [
+                $svc['id'] => ['notes' => $svc['notes'] ?? null],
+            ])->all()
+        );
+        $booking->load([
+            'company', 'user', 'originLocation', 'destinationLocation',
+            'transportMode', 'serviceType', 'containerType',
+            'additionalServices', 'shipment', 'approvedByUser:id,name',
+        ]);
+        $booking->setAttribute('has_shipment', $booking->shipment()->exists());
+
+        return response()->json([
+            'message' => 'Detail booking berhasil diperbarui.',
+            'data' => $booking,
+        ]);
     }
 
     private function ensureCanCreateBooking(Request $request): ?JsonResponse

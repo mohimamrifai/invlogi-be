@@ -165,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('bookings', [AdminBookingController::class, 'store']);
         Route::post('bookings/estimate-price', [AdminBookingController::class, 'estimatePrice']);
         Route::get('bookings/{booking}', [AdminBookingController::class, 'show']);
+        Route::put('bookings/{booking}', [AdminBookingController::class, 'update']);
         Route::post('bookings/{booking}/approve', [AdminBookingController::class, 'approve']);
         Route::post('bookings/{booking}/reject', [AdminBookingController::class, 'reject']);
         Route::post('bookings/{booking}/convert-to-shipment', [AdminBookingController::class, 'convertToShipment']);
