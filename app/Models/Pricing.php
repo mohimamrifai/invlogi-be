@@ -13,7 +13,7 @@ class Pricing extends Model
     protected $fillable = [
         'vendor_service_id', 'container_type_id', 'price_type',
         'price_per_kg', 'price_per_cbm', 'price_per_container',
-        'minimum_charge', 'effective_from', 'effective_to', 'is_active',
+        'minimum_charge', 'min_kg', 'effective_from', 'effective_to', 'is_active',
     ];
 
     protected function casts(): array
@@ -23,6 +23,7 @@ class Pricing extends Model
             'price_per_cbm' => 'decimal:2',
             'price_per_container' => 'decimal:2',
             'minimum_charge' => 'decimal:2',
+            'min_kg' => 'integer',
             'effective_from' => 'date',
             'effective_to' => 'date',
             'is_active' => 'boolean',
