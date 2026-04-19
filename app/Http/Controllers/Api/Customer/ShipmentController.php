@@ -38,7 +38,7 @@ class ShipmentController extends Controller
         }
 
         $shipment->load([
-            'originLocation', 'destinationLocation', 'transportMode', 'serviceType',
+            'booking', 'originLocation', 'destinationLocation', 'transportMode', 'serviceType',
             'items', 'trackings.photos', 'invoice',
         ]);
 
