@@ -251,6 +251,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('company', [CustomerCompanyController::class, 'update']);
 
         // User Management (PIC & Finance)
-        Route::apiResource('users', CustomerUserController::class);
+        Route::apiResource('users', CustomerUserController::class)->names('customer.users');
     });
 });
