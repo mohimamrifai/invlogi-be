@@ -99,20 +99,51 @@ class ShipmentController extends Controller
         $shipment->update(['status' => $data['status']]);
 
         // Jika shipment selesai dan company menggunakan post-paid, auto-generate invoice jika belum ada.
-        $shipment->loadMissing('company', 'booking', 'invoice');
+        $shipment->loadMissing('company', 'booking', 'invoice', 'additionalCharges');
         if ($data['status'] === 'completed'
             && $shipment->company
             && $shipment->company->payment_type === 'postpaid'
             && ! $shipment->invoice
         ) {
             $booking = $shipment->booking;
-            $base = $booking ? (float) ($booking->estimated_price ?? 0) : 0.0;
+            
+            // Re-calculate from booking if exists, else fallback to 0
+            $baseFreight = 0.0;
+            $discount = 0.0;
+            $additionalDetail = [];
+
+            if ($booking) {
+                // If we need the actual breakdown, we could re-run Estimate Service or just read the total.
+                // Since estimate service returns breakdown but isn't saved as JSON, we can fetch services manually.
+                $booking->loadMissing('additionalServices');
+                $additionalTotal = 0;
+                foreach ($booking->additionalServices as $svc) {
+                    $price = (float) ($svc->pivot->price ?? $svc->base_price ?? 0);
+                    $additionalDetail[] = ['name' => $svc->name, 'price' => $price];
+                    $additionalTotal += $price;
+                }
+                
+                // Approximate base freight: (estimated_price - additionalTotal) / 1.11 ? No, estimated_price is before tax.
+                // Wait, in BookingController, subtotal = estimated_price (baseFreight - discount + additionalTotal).
+                // Let's assume no discount saved for now, just:
+                $subtotalBooking = (float) ($booking->estimated_price ?? 0);
+                $baseFreight = max(0, $subtotalBooking - $additionalTotal);
+            }
 
             $issuedDate = now();
             $termDays = (int) ($shipment->company->postpaid_term_days ?? 0);
             $dueDate = $termDays > 0 ? (clone $issuedDate)->addDays($termDays) : $issuedDate;
 
-            $subtotal = $base;
+            // Calculate total from base + booking additional services + shipment additional charges
+            $shipmentChargesTotal = 0;
+            $shipmentChargesDetail = [];
+            foreach ($shipment->additionalCharges as $charge) {
+                $price = (float) ($charge->pivot->amount ?? $charge->base_amount ?? 0);
+                $shipmentChargesDetail[] = ['name' => $charge->name, 'price' => $price];
+                $shipmentChargesTotal += $price;
+            }
+
+            $subtotal = $baseFreight + $additionalTotal + $shipmentChargesTotal;
             $taxAmount = $subtotal * 0.11;
             $totalAmount = $subtotal + $taxAmount;
 
@@ -129,12 +160,45 @@ class ShipmentController extends Controller
                 'created_by' => $request->user()->id,
             ]);
 
-            $invoice->items()->create([
-                'description' => 'Freight & services untuk shipment '.$shipment->shipment_number,
-                'quantity' => 1,
-                'unit_price' => $totalAmount,
-                'total_price' => $totalAmount,
-            ]);
+            if ($baseFreight > 0) {
+                $invoice->items()->create([
+                    'description' => 'Freight / Tarif Pengiriman',
+                    'quantity' => 1,
+                    'unit_price' => $baseFreight,
+                    'total_price' => $baseFreight,
+                ]);
+            }
+
+            foreach ($additionalDetail as $addSvc) {
+                if ($addSvc['price'] > 0) {
+                    $invoice->items()->create([
+                        'description' => 'Layanan Tambahan: ' . $addSvc['name'],
+                        'quantity' => 1,
+                        'unit_price' => $addSvc['price'],
+                        'total_price' => $addSvc['price'],
+                    ]);
+                }
+            }
+
+            foreach ($shipmentChargesDetail as $charge) {
+                if ($charge['price'] > 0) {
+                    $invoice->items()->create([
+                        'description' => 'Biaya Tambahan (Shipment): ' . $charge['name'],
+                        'quantity' => 1,
+                        'unit_price' => $charge['price'],
+                        'total_price' => $charge['price'],
+                    ]);
+                }
+            }
+
+            if ($taxAmount > 0) {
+                $invoice->items()->create([
+                    'description' => 'PPN (11%)',
+                    'quantity' => 1,
+                    'unit_price' => $taxAmount,
+                    'total_price' => $taxAmount,
+                ]);
+            }
         }
 
         return response()->json([

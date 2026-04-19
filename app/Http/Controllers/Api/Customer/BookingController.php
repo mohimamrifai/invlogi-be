@@ -222,12 +222,49 @@ class BookingController extends Controller
                 'created_by' => $user->id,
             ]);
 
-            $invoice->items()->create([
-                'description' => 'Freight & services untuk booking '.$booking->booking_number,
-                'quantity' => 1,
-                'unit_price' => $totalAmount,
-                'total_price' => $totalAmount,
-            ]);
+            $breakdown = $estimate['breakdown'];
+            $baseFreight = (float) ($breakdown['base_freight'] ?? 0);
+            $discount = (float) ($breakdown['discount_amount'] ?? 0);
+
+            if ($baseFreight > 0) {
+                $invoice->items()->create([
+                    'description' => 'Freight / Tarif Pengiriman',
+                    'quantity' => 1,
+                    'unit_price' => $baseFreight,
+                    'total_price' => $baseFreight,
+                ]);
+            }
+
+            if ($discount > 0) {
+                $invoice->items()->create([
+                    'description' => 'Diskon Pengiriman',
+                    'quantity' => 1,
+                    'unit_price' => -$discount,
+                    'total_price' => -$discount,
+                ]);
+            }
+
+            $additionalDetail = $breakdown['additional_services_detail'] ?? [];
+            foreach ($additionalDetail as $addSvc) {
+                $price = (float) ($addSvc['base_price'] ?? 0);
+                if ($price > 0) {
+                    $invoice->items()->create([
+                        'description' => 'Layanan Tambahan: ' . ($addSvc['name'] ?? 'Unknown'),
+                        'quantity' => 1,
+                        'unit_price' => $price,
+                        'total_price' => $price,
+                    ]);
+                }
+            }
+
+            if ($taxAmount > 0) {
+                $invoice->items()->create([
+                    'description' => 'PPN (11%)',
+                    'quantity' => 1,
+                    'unit_price' => $taxAmount,
+                    'total_price' => $taxAmount,
+                ]);
+            }
 
             // Buat transaksi Midtrans (Snap)
             $customerDetails = [
@@ -268,6 +305,89 @@ class BookingController extends Controller
         return response()->json(['data' => $booking]);
     }
 
+    public function update(Request $request, Booking $booking): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($booking->company_id !== $user->company_id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        if (!in_array($booking->status, ['submitted', 'approved'])) {
+            return response()->json(['message' => 'Hanya booking dengan status "Submitted" atau "Approved" yang dapat diedit.'], 422);
+        }
+
+        if ($booking->status === 'approved' && $booking->shipment()->exists()) {
+            return response()->json(['message' => 'Booking yang sudah memiliki shipment tidak dapat diedit.'], 422);
+        }
+
+        $data = $request->validate([
+            'origin_location_id' => 'required|exists:locations,id',
+            'destination_location_id' => 'required|exists:locations,id',
+            'transport_mode_id' => 'required|exists:transport_modes,id',
+            'service_type_id' => 'required|exists:service_types,id',
+            'container_type_id' => 'nullable|exists:container_types,id',
+            'container_count' => 'nullable|integer|min:1',
+            'estimated_weight' => 'nullable|numeric|min:0',
+            'estimated_cbm' => 'nullable|numeric|min:0',
+            'cargo_category_id' => 'required|exists:cargo_categories,id',
+            'cargo_description' => 'nullable|string',
+            'departure_date' => 'nullable|date|after_or_equal:today',
+            'shipper_name' => 'required|string|max:255',
+            'shipper_address' => 'required|string',
+            'shipper_phone' => 'required|string|max:50',
+            'consignee_name' => 'required|string|max:255',
+            'consignee_address' => 'required|string',
+            'consignee_phone' => 'required|string|max:50',
+            'notes' => 'nullable|string',
+            'additional_services' => 'nullable|array',
+            'additional_services.*.id' => 'exists:additional_services,id',
+            'additional_services.*.notes' => 'nullable|string',
+            'is_dangerous_goods' => 'nullable|boolean',
+            'dg_class_id' => 'nullable|required_if:is_dangerous_goods,1,true|exists:dg_classes,id',
+            'un_number' => 'nullable|required_if:is_dangerous_goods,1,true|string|max:50',
+            'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
+            'temperature' => 'nullable|numeric',
+        ]);
+
+        $estimateParams = [
+            ...$data,
+            'additional_services' => array_column($data['additional_services'] ?? [], 'id'),
+            'company_id' => $user->company_id,
+        ];
+        $estimate = $this->priceEstimateService->estimate($estimateParams);
+
+        // Update basic booking data
+        $updatePayload = [
+            ...$data,
+            'estimated_price' => $estimate['estimated_price'],
+        ];
+
+        // Jika statusnya approved, kembalikan menjadi submitted karena ada perubahan data
+        if ($booking->status === 'approved') {
+            $updatePayload['status'] = 'submitted';
+            $updatePayload['notes'] = trim($booking->notes . "\n[System: Status diubah ke Submitted karena Customer melakukan Edit]");
+        }
+
+        $booking->update($updatePayload);
+
+        // Sync additional services
+        $syncData = [];
+        if (! empty($data['additional_services'])) {
+            foreach ($data['additional_services'] as $svc) {
+                $syncData[$svc['id']] = ['notes' => $svc['notes'] ?? null];
+            }
+        }
+        $booking->additionalServices()->sync($syncData);
+
+        return response()->json([
+            'message' => 'Booking berhasil diperbarui.',
+            'data' => $booking->fresh(['originLocation', 'destinationLocation', 'serviceType', 'additionalServices']),
+            'estimated_price' => $estimate['estimated_price'],
+            'breakdown' => $estimate['breakdown'],
+        ]);
+    }
+
     public function cancel(Request $request, Booking $booking): JsonResponse
     {
         $user = $request->user();
@@ -276,12 +396,23 @@ class BookingController extends Controller
             return response()->json(['message' => 'Akses ditolak.'], 403);
         }
 
-        // Hanya bisa cancel jika status masih 'submitted'
-        if ($booking->status !== 'submitted') {
-            return response()->json(['message' => 'Hanya booking dengan status "Submitted" yang dapat dibatalkan.'], 422);
+        $request->validate([
+            'reason' => 'required|string|max:1000'
+        ]);
+
+        if (!in_array($booking->status, ['submitted', 'approved'])) {
+            return response()->json(['message' => 'Hanya booking dengan status Submitted atau Approved yang dapat dibatalkan.'], 422);
+        }
+        
+        // Prevent cancel if shipment already exists
+        if ($booking->shipment()->exists()) {
+            return response()->json(['message' => 'Booking ini sudah diproses menjadi Shipment dan tidak dapat dibatalkan.'], 422);
         }
 
-        $booking->update(['status' => 'cancelled']);
+        $booking->update([
+            'status' => 'cancelled',
+            'notes' => trim($booking->notes . "\n\nAlasan Pembatalan: " . $request->reason),
+        ]);
 
         return response()->json(['message' => 'Booking berhasil dibatalkan.', 'data' => $booking]);
     }

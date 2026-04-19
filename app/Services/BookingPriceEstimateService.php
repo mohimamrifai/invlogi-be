@@ -121,6 +121,27 @@ class BookingPriceEstimateService
         if ($containerTypeId && $containerCount > 0) {
             return (float) $pricing->price_per_container * $containerCount;
         }
+        
+        $minKg = (float) ($pricing->min_kg ?? 0);
+        $minCharge = (float) ($pricing->minimum_charge ?? 0);
+        $nextPrice = (float) ($pricing->price_per_kg ?? 0);
+
+        if ($minKg > 0 && $minCharge > 0) {
+            // New logic for LCL: Minimum charge applies for the first min_kg.
+            // Any weight exceeding min_kg is charged at nextPrice per kg.
+            if ($weight <= $minKg) {
+                $subtotal = $minCharge;
+            } else {
+                $extraWeight = $weight - $minKg;
+                $subtotal = $minCharge + ($extraWeight * $nextPrice);
+            }
+            
+            // Compare with CBM if CBM is provided and price_per_cbm is set
+            $byCbm = $cbm > 0 ? (float) $pricing->price_per_cbm * $cbm : 0.0;
+            return max($subtotal, $byCbm);
+        }
+
+        // Old fallback logic
         $byWeight = $weight > 0 ? (float) $pricing->price_per_kg * $weight : 0.0;
         $byCbm = $cbm > 0 ? (float) $pricing->price_per_cbm * $cbm : 0.0;
         $subtotal = max($byWeight, $byCbm);

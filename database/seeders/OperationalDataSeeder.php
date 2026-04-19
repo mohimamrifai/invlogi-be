@@ -20,6 +20,7 @@ class OperationalDataSeeder extends Seeder
             ['code' => 'PRJ', 'name' => 'Project Cargo', 'description' => 'Barang besar/berat atau over dimension', 'flags' => ['is_project_cargo' => true]],
             ['code' => 'LIQ', 'name' => 'Liquid / Bulk', 'description' => 'Barang cair atau curah', 'flags' => ['is_liquid' => true]],
             ['code' => 'MIX', 'name' => 'Mixed Cargo', 'description' => 'Kargo campuran dalam satu shipment', 'flags' => []],
+            ['code' => 'DG', 'name' => 'Dangerous Goods', 'description' => 'Barang berbahaya (DG) yang membutuhkan penanganan khusus', 'flags' => []],
         ];
 
         foreach ($categories as $cat) {
