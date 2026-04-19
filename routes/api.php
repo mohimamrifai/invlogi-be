@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\Customer\MasterDataReadController;
 use App\Http\Controllers\Api\Customer\PaymentController as CustomerPaymentController;
 use App\Http\Controllers\Api\Customer\RegistrationController;
 use App\Http\Controllers\Api\Customer\ShipmentController as CustomerShipmentController;
+use App\Http\Controllers\Api\Customer\UserController as CustomerUserController;
 use App\Http\Controllers\Api\MidtransWebhookController;
 use App\Http\Controllers\Api\PublicBookingEstimateController;
 use App\Http\Controllers\Api\PublicTrackingController;
@@ -248,5 +249,8 @@ Route::middleware('auth:sanctum')->group(function () {
         // Company Settings
         Route::get('company', [CustomerCompanyController::class, 'show']);
         Route::put('company', [CustomerCompanyController::class, 'update']);
+
+        // User Management (PIC & Finance)
+        Route::apiResource('users', CustomerUserController::class);
     });
 });
