@@ -21,20 +21,19 @@ class BookingPriceEstimateService
         $companyId = $params['company_id'] ?? null;
         $additionalServiceIds = $params['additional_services'] ?? [];
 
-        // Find matching vendor service (route)
-        $vendorService = VendorService::query()
+        // Find all matching vendor services (routes)
+        $vendorServices = VendorService::query()
             ->where('origin_location_id', $params['origin_location_id'])
             ->where('destination_location_id', $params['destination_location_id'])
             ->where('transport_mode_id', $params['transport_mode_id'])
             ->where('service_type_id', $params['service_type_id'])
             ->where('is_active', true)
-            ->first();
+            ->get();
 
-        $baseFreight = 0.0;
-        $vendorServiceId = null;
+        $lowestFreight = null;
+        $bestVendorServiceId = null;
 
-        if ($vendorService) {
-            $vendorServiceId = $vendorService->id;
+        foreach ($vendorServices as $vendorService) {
             $pricing = $this->findSellPricing(
                 $vendorService,
                 $params['container_type_id'] ?? null,
@@ -42,16 +41,25 @@ class BookingPriceEstimateService
                 (float) ($params['estimated_weight'] ?? 0),
                 (float) ($params['estimated_cbm'] ?? 0)
             );
+
             if ($pricing) {
-                $baseFreight = $this->calculateFreightFromPricing(
+                $freight = $this->calculateFreightFromPricing(
                     $pricing,
                     $params['container_type_id'] ?? null,
                     $params['container_count'] ?? 1,
                     (float) ($params['estimated_weight'] ?? 0),
                     (float) ($params['estimated_cbm'] ?? 0)
                 );
+
+                if ($lowestFreight === null || $freight < $lowestFreight) {
+                    $lowestFreight = $freight;
+                    $bestVendorServiceId = $vendorService->id;
+                }
             }
         }
+
+        $baseFreight = $lowestFreight ?? 0.0;
+        $vendorServiceId = $bestVendorServiceId;
 
         // Apply customer discount
         $discountAmount = 0.0;

@@ -128,9 +128,15 @@ class CompanyController extends Controller
     {
         $company->update(['status' => 'inactive']);
 
-        User::where('company_id', $company->id)
+        $users = User::where('company_id', $company->id)
             ->where('status', '!=', 'inactive')
-            ->update(['status' => 'inactive']);
+            ->get();
+
+        foreach ($users as $user) {
+            $user->update(['status' => 'inactive']);
+            // Revoke all tokens so they are logged out immediately
+            $user->tokens()->delete();
+        }
 
         return response()->json([
             'message' => 'Perusahaan berhasil dinonaktifkan.',

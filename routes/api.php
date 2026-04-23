@@ -177,7 +177,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('shipments/{shipment}', [AdminShipmentController::class, 'update']);
         Route::post('shipments/{shipment}/tracking', [AdminShipmentController::class, 'updateTracking']);
         Route::post('shipments/{shipment}/containers', [AdminShipmentController::class, 'addContainer']);
+        Route::put('containers/{container}', [AdminShipmentController::class, 'updateContainer']);
+        Route::delete('containers/{container}', [AdminShipmentController::class, 'destroyContainer']);
         Route::post('containers/{container}/racks', [AdminShipmentController::class, 'addRack']);
+        Route::put('racks/{rack}', [AdminShipmentController::class, 'updateRack']);
+        Route::delete('racks/{rack}', [AdminShipmentController::class, 'destroyRack']);
         Route::post('shipments/{shipment}/items', [AdminShipmentController::class, 'addItem']);
         Route::put('shipment-items/{item}', [AdminShipmentController::class, 'updateItem']);
         Route::delete('shipment-items/{item}', [AdminShipmentController::class, 'destroyItem']);

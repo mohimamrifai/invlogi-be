@@ -211,7 +211,7 @@ class BulkTransactionalSeeder extends Seeder
                 'consignee_name' => "PT Penerima Dummy {$i}",
                 'consignee_address' => "Jl. Penerima No. {$i}",
                 'consignee_phone' => '0898' . str_pad((string) (9000000 + $i), 7, '0', STR_PAD_LEFT),
-                'pickup_date' => Carbon::now()->addDays($i % 14),
+                'departure_date' => Carbon::now()->addDays($i % 14),
                 'estimated_price' => 5000000 + ($i * 125000),
                 'status' => $status,
                 'notes' => 'Data seed otomatis.',

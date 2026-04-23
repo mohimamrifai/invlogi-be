@@ -45,7 +45,7 @@ class Shipment extends Model
                 $shipment->shipment_number = 'SH-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
             }
             if (empty($shipment->waybill_number)) {
-                $shipment->waybill_number = 'WB-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+                $shipment->waybill_number = 'CN-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
             }
         });
     }

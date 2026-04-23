@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Container;
 use App\Models\Invoice;
+use App\Models\Rack;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -96,7 +97,14 @@ class ShipmentController extends Controller
         }
 
         // Update status shipment
-        $shipment->update(['status' => $data['status']]);
+        $statusMapping = [
+            'booking_created' => 'created',
+            'train_departed' => 'departed',
+            'train_arrived' => 'arrived',
+            'container_unloading' => 'unloading',
+        ];
+        $shipmentStatus = $statusMapping[$data['status']] ?? $data['status'];
+        $shipment->update(['status' => $shipmentStatus]);
 
         // Jika shipment selesai dan company menggunakan post-paid, auto-generate invoice jika belum ada.
         $shipment->loadMissing('company', 'booking', 'invoice', 'additionalCharges');
@@ -224,6 +232,25 @@ class ShipmentController extends Controller
         ], 201);
     }
 
+    public function updateContainer(Request $request, Container $container): JsonResponse
+    {
+        $data = $request->validate([
+            'container_type_id' => 'sometimes|exists:container_types,id',
+            'container_number' => 'nullable|string|max:255',
+            'seal_number' => 'nullable|string|max:255',
+        ]);
+
+        $container->update($data);
+
+        return response()->json(['message' => 'Container diperbarui.', 'data' => $container->load('containerType')]);
+    }
+
+    public function destroyContainer(Container $container): JsonResponse
+    {
+        $container->delete();
+        return response()->json(['message' => 'Container dihapus.']);
+    }
+
     // ── RACK MANAGEMENT ──
     public function addRack(Request $request, Container $container): JsonResponse
     {
@@ -237,6 +264,26 @@ class ShipmentController extends Controller
         $rack = $container->racks()->create($data);
 
         return response()->json(['message' => 'Rack ditambahkan.', 'data' => $rack], 201);
+    }
+
+    public function updateRack(Request $request, Rack $rack): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'length' => 'nullable|numeric',
+            'width' => 'nullable|numeric',
+            'height' => 'nullable|numeric',
+        ]);
+
+        $rack->update($data);
+
+        return response()->json(['message' => 'Rack diperbarui.', 'data' => $rack]);
+    }
+
+    public function destroyRack(Rack $rack): JsonResponse
+    {
+        $rack->delete();
+        return response()->json(['message' => 'Rack dihapus.']);
     }
 
     // ── SHIPMENT ITEMS ──

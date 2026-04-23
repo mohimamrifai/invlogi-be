@@ -30,17 +30,23 @@ class BookingController extends Controller
             'destination_location_id' => 'required|exists:locations,id',
             'transport_mode_id' => 'required|exists:transport_modes,id',
             'service_type_id' => 'required|exists:service_types,id',
+            'cargo_category_id' => 'nullable|exists:cargo_categories,id',
             'container_type_id' => 'nullable|exists:container_types,id',
             'container_count' => 'nullable|integer|min:1',
             'estimated_weight' => 'nullable|numeric|min:0',
             'estimated_cbm' => 'nullable|numeric|min:0',
             'additional_services' => 'nullable|array',
-            'additional_services.*' => 'exists:additional_services,id',
+            'additional_services.*.id' => 'exists:additional_services,id',
+            'is_dangerous_goods' => 'nullable|boolean',
+            'dg_class_id' => 'nullable|exists:dg_classes,id',
+            'un_number' => 'nullable|string|max:50',
+            'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
+            'temperature' => 'nullable|numeric',
         ]);
 
         $params = [
             ...$data,
-            'additional_services' => $data['additional_services'] ?? [],
+            'additional_services' => array_column($data['additional_services'] ?? [], 'id'),
             'company_id' => $user->company_id,
         ];
 
@@ -163,7 +169,7 @@ class BookingController extends Controller
                 ]);
             }
         }
-        $booking->load(['originLocation', 'destinationLocation', 'serviceType', 'additionalServices', 'company']);
+        $booking->load(['company', 'user', 'cargoCategory', 'dgClass', 'originLocation', 'destinationLocation', 'serviceType', 'additionalServices']);
 
         $prepaidPayload = null;
 
@@ -298,6 +304,7 @@ class BookingController extends Controller
         }
 
         $booking->load([
+            'company', 'user', 'cargoCategory', 'dgClass',
             'originLocation', 'destinationLocation', 'transportMode',
             'serviceType', 'containerType', 'additionalServices', 'shipment',
         ]);
@@ -382,7 +389,7 @@ class BookingController extends Controller
 
         return response()->json([
             'message' => 'Booking berhasil diperbarui.',
-            'data' => $booking->fresh(['originLocation', 'destinationLocation', 'serviceType', 'additionalServices']),
+            'data' => $booking->fresh(['company', 'user', 'cargoCategory', 'dgClass', 'originLocation', 'destinationLocation', 'serviceType', 'additionalServices']),
             'estimated_price' => $estimate['estimated_price'],
             'breakdown' => $estimate['breakdown'],
         ]);
@@ -411,7 +418,7 @@ class BookingController extends Controller
 
         $booking->update([
             'status' => 'cancelled',
-            'notes' => trim($booking->notes . "\n\nAlasan Pembatalan: " . $request->reason),
+            'notes' => trim($booking->notes . "\n[System: Dibatalkan oleh Customer. Alasan: " . $request->reason . "]"),
         ]);
 
         return response()->json(['message' => 'Booking berhasil dibatalkan.', 'data' => $booking]);
