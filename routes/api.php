@@ -208,6 +208,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('vendors/{vendor}/services', [VendorController::class, 'storeService']);
         Route::post('vendor-services/{vendorService}/pricings', [VendorController::class, 'storePricing']);
         Route::put('pricings/{pricing}', [VendorController::class, 'updatePricing']);
+        Route::delete('pricings/{pricing}', [VendorController::class, 'destroyPricing']);
     });
 
     // ══════════════════════════════════════════

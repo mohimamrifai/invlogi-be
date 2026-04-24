@@ -86,7 +86,6 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'email' => "sometimes|email|unique:users,email,{$user->id}",
             'phone' => 'nullable|string|max:20',
             'user_type' => 'sometimes|in:internal,customer',
             'company_id' => 'nullable|exists:companies,id',
@@ -116,8 +115,8 @@ class UserController extends Controller
 
     public function destroy(User $user): JsonResponse
     {
-        $user->delete();
-
-        return response()->json(['message' => 'User berhasil dihapus.']);
+        // Hapus pengguna tidak diperbolehkan sesuai instruksi. 
+        // Jika perlu bisa dinonaktifkan di update status, namun fungsi destroy dimatikan.
+        return response()->json(['message' => 'Fitur hapus pengguna dinonaktifkan.'], 403);
     }
 }

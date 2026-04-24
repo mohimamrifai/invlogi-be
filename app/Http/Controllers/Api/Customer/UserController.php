@@ -94,12 +94,14 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:20',
             'role' => 'sometimes|in:ops_pic,finance_pic,company_admin',
             'password' => 'nullable|string|min:8',
+            'status' => 'sometimes|in:active,inactive',
         ]);
 
         $updateData = [];
         if (isset($validated['name'])) $updateData['name'] = $validated['name'];
         if (isset($validated['email'])) $updateData['email'] = $validated['email'];
         if (array_key_exists('phone', $validated)) $updateData['phone'] = $validated['phone'];
+        if (isset($validated['status'])) $updateData['status'] = $validated['status'];
         if (!empty($validated['password'])) $updateData['password'] = Hash::make($validated['password']);
 
         if (!empty($updateData)) {

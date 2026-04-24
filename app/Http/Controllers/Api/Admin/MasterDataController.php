@@ -126,6 +126,11 @@ class MasterDataController extends Controller
         ]);
         $transportMode->update($data);
 
+        // Jika transport mode dinonaktifkan, maka semua service types yang berelasi juga dinonaktifkan
+        if (isset($data['is_active']) && $data['is_active'] === false) {
+            $transportMode->serviceTypes()->update(['is_active' => false]);
+        }
+
         return response()->json(['data' => $transportMode]);
     }
 
@@ -169,6 +174,8 @@ class MasterDataController extends Controller
             'code' => 'nullable|string|max:10',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
+        ], [], [
+            'transport_mode_id' => 'moda transport',
         ]);
 
         return response()->json(['data' => ServiceType::create($data)], 201);
@@ -182,6 +189,8 @@ class MasterDataController extends Controller
             'code' => 'nullable|string|max:10',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
+        ], [], [
+            'transport_mode_id' => 'moda transport',
         ]);
         $serviceType->update($data);
 
@@ -285,8 +294,12 @@ class MasterDataController extends Controller
             'name' => 'required|string|max:255',
             'category' => 'required|in:pickup,packing,handling,other',
             'description' => 'nullable|string',
-            'base_price' => 'nullable|numeric|min:0',
+            'base_price' => 'required|numeric|min:0',
             'is_active' => 'boolean',
+        ], [], [
+            'name' => 'nama',
+            'category' => 'kategori',
+            'base_price' => 'harga dasar',
         ]);
 
         return response()->json(['data' => AdditionalService::create($data)], 201);
@@ -295,11 +308,15 @@ class MasterDataController extends Controller
     public function updateAdditionalService(Request $request, AdditionalService $additionalService): JsonResponse
     {
         $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'category' => 'sometimes|in:pickup,packing,handling,other',
+            'name' => 'sometimes|required|string|max:255',
+            'category' => 'sometimes|required|in:pickup,packing,handling,other',
             'description' => 'nullable|string',
-            'base_price' => 'nullable|numeric|min:0',
+            'base_price' => 'sometimes|required|numeric|min:0',
             'is_active' => 'boolean',
+        ], [], [
+            'name' => 'nama',
+            'category' => 'kategori',
+            'base_price' => 'harga dasar',
         ]);
         $additionalService->update($data);
 
@@ -469,12 +486,17 @@ class MasterDataController extends Controller
     public function storeCargoCategory(Request $request): JsonResponse
     {
         $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:20|unique:cargo_categories,code',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
             'requires_temperature' => 'boolean',
             'is_project_cargo' => 'boolean',
             'is_liquid' => 'boolean',
             'is_food' => 'boolean',
+        ], [], [
+            'name' => 'nama',
+            'code' => 'kode',
         ]);
 
         return response()->json(['data' => CargoCategory::create($data)], 201);
@@ -483,7 +505,7 @@ class MasterDataController extends Controller
     public function updateCargoCategory(Request $request, CargoCategory $cargoCategory): JsonResponse
     {
         $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
+            'name' => 'sometimes|required|string|max:255',
             'code' => "nullable|string|max:20|unique:cargo_categories,code,{$cargoCategory->id}",
             'description' => 'nullable|string',
             'is_active' => 'boolean',
@@ -491,6 +513,9 @@ class MasterDataController extends Controller
             'is_project_cargo' => 'boolean',
             'is_liquid' => 'boolean',
             'is_food' => 'boolean',
+        ], [], [
+            'name' => 'nama',
+            'code' => 'kode',
         ]);
         $cargoCategory->update($data);
 

@@ -100,6 +100,22 @@ class VendorController extends Controller
             'effective_to' => 'nullable|date',
             'is_active' => 'boolean',
         ]);
+
+        $existingPricing = \App\Models\Pricing::whereHas('vendorService', function ($query) use ($vendorService) {
+            $query->where('vendor_id', $vendorService->vendor_id)
+                  ->where('transport_mode_id', $vendorService->transport_mode_id)
+                  ->where('service_type_id', $vendorService->service_type_id)
+                  ->where('origin_location_id', $vendorService->origin_location_id)
+                  ->where('destination_location_id', $vendorService->destination_location_id);
+        })
+        ->where('container_type_id', $data['container_type_id'] ?? null)
+        ->where('price_type', $data['price_type'])
+        ->exists();
+
+        if ($existingPricing) {
+            return response()->json(['message' => 'Tarif dengan lane, layanan, dan tipe harga yang sama sudah ada untuk vendor ini.'], 422);
+        }
+
         $pricing = $vendorService->pricings()->create($data);
         return response()->json(['data' => $pricing], 201);
     }
@@ -118,7 +134,34 @@ class VendorController extends Controller
             'effective_to' => 'nullable|date',
             'is_active' => 'boolean',
         ]);
+
+        $vendorService = $pricing->vendorService;
+        $checkContainerType = array_key_exists('container_type_id', $data) ? $data['container_type_id'] : $pricing->container_type_id;
+        $checkPriceType = $data['price_type'] ?? $pricing->price_type;
+
+        $existingPricing = \App\Models\Pricing::whereHas('vendorService', function ($query) use ($vendorService) {
+            $query->where('vendor_id', $vendorService->vendor_id)
+                  ->where('transport_mode_id', $vendorService->transport_mode_id)
+                  ->where('service_type_id', $vendorService->service_type_id)
+                  ->where('origin_location_id', $vendorService->origin_location_id)
+                  ->where('destination_location_id', $vendorService->destination_location_id);
+        })
+        ->where('container_type_id', $checkContainerType)
+        ->where('price_type', $checkPriceType)
+        ->where('id', '!=', $pricing->id)
+        ->exists();
+
+        if ($existingPricing) {
+            return response()->json(['message' => 'Tarif dengan lane, layanan, dan tipe harga yang sama sudah ada untuk vendor ini.'], 422);
+        }
+
         $pricing->update($data);
         return response()->json(['data' => $pricing]);
+    }
+
+    public function destroyPricing(Pricing $pricing): JsonResponse
+    {
+        $pricing->delete();
+        return response()->json(['message' => 'Tarif dihapus.']);
     }
 }
