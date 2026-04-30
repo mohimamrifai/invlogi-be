@@ -81,6 +81,18 @@ class VendorController extends Controller
             'destination_location_id' => 'required|exists:locations,id',
             'is_active' => 'boolean',
         ]);
+
+        $exists = $vendor->vendorServices()
+            ->where('transport_mode_id', $data['transport_mode_id'])
+            ->where('service_type_id', $data['service_type_id'])
+            ->where('origin_location_id', $data['origin_location_id'])
+            ->where('destination_location_id', $data['destination_location_id'])
+            ->exists();
+
+        if ($exists) {
+            return response()->json(['message' => 'Layanan (lane & service) ini sudah ada untuk vendor tersebut.'], 422);
+        }
+
         $svc = $vendor->vendorServices()->create($data);
         return response()->json(['data' => $svc], 201);
     }

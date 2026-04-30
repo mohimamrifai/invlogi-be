@@ -39,6 +39,7 @@ class CompanyController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:companies,name',
             'business_entity_type' => 'nullable|string|max:20|in:PT,CV,Firma,UD,Koperasi,Yayasan,Lainnya',
+            'company_code' => 'nullable|string|max:10|unique:companies,company_code',
             'npwp' => 'nullable|string|max:30',
             'nib' => 'nullable|string|max:30',
             'address' => 'nullable|string',
@@ -52,9 +53,28 @@ class CompanyController extends Controller
             'billing_cycle' => 'required|in:half_monthly_1,half_monthly_2,both_half,end_of_month',
             'payment_type' => 'required|in:prepaid,postpaid',
             'postpaid_term_days' => 'nullable|integer|min:0|max:365',
+            
+            // PIC / User Login fields
+            'pic_name' => 'nullable|string|max:255',
+            'pic_email' => 'nullable|email|max:255|unique:users,email',
+            'pic_phone' => 'nullable|string|max:20',
+            'password' => 'nullable|string|min:8',
         ]);
 
         $company = Company::create($validated);
+
+        if (!empty($validated['pic_email']) && !empty($validated['password'])) {
+            $user = User::create([
+                'name' => $validated['pic_name'] ?? $validated['contact_person'] ?? $company->name,
+                'email' => $validated['pic_email'],
+                'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+                'phone' => $validated['pic_phone'] ?? null,
+                'user_type' => 'customer',
+                'company_id' => $company->id,
+                'status' => 'active',
+            ]);
+            $user->assignRole('company_admin');
+        }
 
         return response()->json([
             'message' => 'Perusahaan berhasil dibuat.',
@@ -75,6 +95,7 @@ class CompanyController extends Controller
         $validated = $request->validate([
             'name' => sprintf('sometimes|string|max:255|unique:companies,name,%d', $company->id),
             'business_entity_type' => 'nullable|string|max:20|in:PT,CV,Firma,UD,Koperasi,Yayasan,Lainnya',
+            'company_code' => sprintf('nullable|string|max:10|unique:companies,company_code,%d', $company->id),
             'npwp' => 'nullable|string|max:30',
             'nib' => 'nullable|string|max:30',
             'address' => 'nullable|string',

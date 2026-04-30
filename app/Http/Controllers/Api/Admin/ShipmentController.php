@@ -35,7 +35,8 @@ class ShipmentController extends Controller
     public function show(Shipment $shipment): JsonResponse
     {
         $shipment->load([
-            'booking', 'company', 'originLocation', 'destinationLocation',
+            'booking.cargoCategory', 'booking.dgClass',
+            'company', 'originLocation', 'destinationLocation',
             'transportMode', 'serviceType', 'createdByUser:id,name',
             'containers.containerType', 'containers.racks.items',
             'items', 'trackings.photos', 'trackings.updatedByUser:id,name',

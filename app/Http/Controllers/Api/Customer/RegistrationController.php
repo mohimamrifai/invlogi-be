@@ -49,6 +49,8 @@ class RegistrationController extends Controller
             'contact_person' => $data['name'],
             'email' => $data['email'],
             'status' => 'pending',
+            'payment_type' => 'prepaid',
+            'billing_cycle' => 'end_of_month', // default value, will be ignored for prepaid
         ]);
 
         $user = User::create([

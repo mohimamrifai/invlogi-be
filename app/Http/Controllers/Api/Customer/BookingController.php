@@ -61,6 +61,7 @@ class BookingController extends Controller
         $query = Booking::with([
             'originLocation:id,name,code', 'destinationLocation:id,name,code',
             'serviceType:id,name,code', 'transportMode:id,name',
+            'shipment:id,booking_id'
         ])->where('company_id', $user->company_id);
 
         if ($request->filled('status')) $query->where('status', $request->status);
