@@ -348,15 +348,19 @@ class BookingController extends Controller
             'consignee_address' => 'required|string',
             'consignee_phone' => 'required|string|max:50',
             'notes' => 'nullable|string',
-            'additional_services' => 'nullable|array',
-            'additional_services.*.id' => 'exists:additional_services,id',
-            'additional_services.*.notes' => 'nullable|string',
-            'is_dangerous_goods' => 'nullable|boolean',
+            'additional_services' => 'nullable', // Can be JSON string from FormData
+            'is_dangerous_goods' => 'nullable|in:0,1,true,false',
             'dg_class_id' => 'nullable|required_if:is_dangerous_goods,1,true|exists:dg_classes,id',
             'un_number' => 'nullable|required_if:is_dangerous_goods,1,true|string|max:50',
+            'msds_file' => 'nullable|file|mimes:pdf|max:5120',
             'equipment_condition' => 'nullable|in:CLEAN,RESIDUAL',
             'temperature' => 'nullable|numeric',
         ]);
+
+        // Handle additional_services if it came from FormData as a JSON string
+        if (is_string($request->additional_services)) {
+            $data['additional_services'] = json_decode($request->additional_services, true);
+        }
 
         $estimateParams = [
             ...$data,
@@ -370,6 +374,14 @@ class BookingController extends Controller
             ...$data,
             'estimated_price' => $estimate['estimated_price'],
         ];
+
+        // Handle MSDS file upload
+        if ($request->hasFile('msds_file')) {
+            $updatePayload['msds_file'] = $request->file('msds_file')->store('msds_files', 'public');
+        }
+
+        // Remove additional_services from payload to avoid column not found error
+        unset($updatePayload['additional_services']);
 
         // Jika statusnya approved, kembalikan menjadi submitted karena ada perubahan data
         if ($booking->status === 'approved') {
