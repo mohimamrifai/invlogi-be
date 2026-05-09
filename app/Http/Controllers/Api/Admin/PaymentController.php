@@ -48,6 +48,50 @@ class PaymentController extends Controller
     }
 
     /**
+     * Generate Midtrans Payment Link untuk Customer.
+     */
+    public function generatePaymentLink(Request $request, Invoice $invoice, MidtransService $midtrans): JsonResponse
+    {
+        if (! $request->user()->can('manage_payments')) {
+            return response()->json(['message' => 'Tidak ada izin untuk mengelola pembayaran.'], 403);
+        }
+
+        if ($invoice->status === 'paid') {
+            return response()->json(['message' => 'Invoice ini sudah lunas.'], 422);
+        }
+
+        if ($invoice->status === 'cancelled') {
+            return response()->json(['message' => 'Invoice ini sudah dibatalkan.'], 422);
+        }
+
+        $invoice->load('company');
+        $company = $invoice->company;
+
+        $customerDetails = [
+            'first_name' => $company?->name ?? 'Customer',
+            'name' => $company?->name ?? 'Customer',
+            'email' => $company?->email ?? '',
+            'phone' => $company?->phone ?? '',
+        ];
+
+        try {
+            $result = $midtrans->createSnapTransaction($invoice, $customerDetails);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Gagal membuat link pembayaran Midtrans.',
+                'error' => $e->getMessage(),
+            ], 502);
+        }
+
+        return response()->json([
+            'message' => 'Link pembayaran berhasil dibuat.',
+            'data' => [
+                'payment_url' => $result['redirect_url'],
+            ],
+        ], 201);
+    }
+
+    /**
      * Tarik status terkini dari Midtrans Core API dan perbarui pembayaran + invoice.
      */
     public function syncMidtrans(Request $request, Payment $payment, MidtransService $midtrans): JsonResponse

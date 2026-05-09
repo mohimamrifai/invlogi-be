@@ -195,6 +195,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('invoices', [AdminInvoiceController::class, 'store']);
         Route::put('invoices/{invoice}', [AdminInvoiceController::class, 'update']);
         Route::delete('invoices/{invoice}', [AdminInvoiceController::class, 'destroy']);
+        Route::post('invoices/{invoice}/generate-payment-link', [AdminPaymentController::class, 'generatePaymentLink']);
 
         // Payment / AR Management
         Route::get('payments', [AdminPaymentController::class, 'index']);
